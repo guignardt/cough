@@ -18,7 +18,9 @@ static usize token_len[] = {
     [TOKEN_DOUBLE_ARROW] = 2,
     [TOKEN_SEMICOLON] = 1,
 
+    [TOKEN_BANG] = 1,
     [TOKEN_AMPERSAND] = 1,
+    [TOKEN_TUBE] = 1,
 
     [TOKEN_IDENTIFIER] = -1,
 

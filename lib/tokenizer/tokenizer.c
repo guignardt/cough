@@ -37,7 +37,9 @@ static ExactToken punctuation[] = {
     { "=>", TOKEN_DOUBLE_ARROW },
     { ";", TOKEN_SEMICOLON },
 
+    { "!", TOKEN_BANG },
     { "&", TOKEN_AMPERSAND },
+    { "|", TOKEN_TUBE },
 };
 
 static void tokenize_punctuation(Tokenizer* tokenizer) {

@@ -76,8 +76,19 @@ typedef struct VariableRef {
     BindingId binding;
 } VariableRef;
 
+typedef enum UnaryOperator {
+    OPERATION_NOT,
+} UnaryOperator;
+
+typedef struct UnaryOperation {
+    UnaryOperator operator;
+    ExpressionId operand;
+} UnaryOperation;
+
 typedef enum BinaryOperator {
     OPERATION_FUNCTION_CALL,
+    OPERATION_OR,
+    OPERATION_AND,
 } BinaryOperator;
 
 typedef struct BinaryOperation {
@@ -90,6 +101,7 @@ typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
     EXPRESSION_LITERAL_BOOL,
+    EXPRESSION_UNARY_OPERATION,
     EXPRESSION_BINARY_OPERATION,
 } ExpressionKind;
 
@@ -99,6 +111,7 @@ typedef struct Expression {
         VariableRef variable;
         Function function;
         bool literal_bool;
+        UnaryOperation unary_operation;
         BinaryOperation binary_operation;
     } as;
     Range range;

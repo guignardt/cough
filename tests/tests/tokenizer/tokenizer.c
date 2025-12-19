@@ -5,7 +5,7 @@
 #include "tests/common.h"
 
 int main(int argc, char const* argv[]) {
-    char const* source = "() : :: = := -> => ; & hello let fn \n false true";
+    char const* source = "() : :: = := -> => ; ! & | hello let fn \n false true";
     TestReporter reporter = test_reporter_new();
 
     TokenStream tokens;
@@ -17,8 +17,8 @@ int main(int argc, char const* argv[]) {
 
     assert(reporter.error_codes.len == 0);
 
-    assert(tokens.tokens.len == 15);
-    for (usize i = 0; i < 15; i++) {
+    assert(tokens.tokens.len == 17);
+    for (usize i = 0; i < tokens.tokens.len; i++) {
         assert(tokens.tokens.data[i].kind == i);
     }
 

@@ -14,6 +14,7 @@ cough_test(test_tokenizer tokenizer/tokenizer.c)
 cough_test(test_ast_constant_fn ast/constant_fn.c)
 cough_test(test_ast_identity_fn ast/identity_fn.c)
 cough_test(test_ast_functions ast/functions.c)
+cough_test(test_ast_expressions ast/expressions.c)
 
 cough_test(test_generator_functions generator/functions.c)
 

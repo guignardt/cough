@@ -15,7 +15,9 @@ typedef enum TokenKind {
     TOKEN_DOUBLE_ARROW,
     TOKEN_SEMICOLON,
 
+    TOKEN_BANG,
     TOKEN_AMPERSAND,
+    TOKEN_TUBE,
 
     TOKEN_IDENTIFIER,
 

@@ -49,12 +49,31 @@ static ExpressionId box_expression(Parser* parser, Expression expression) {
     return id;
 }
 
+typedef enum Precedence {
+    PRECEDENCE_ANY,
+    PRECEDENCE_LOGICAL_BINARY,
+    PRECEDENCE_PREFIX,
+    PRECEDENCE_FUNCTION_CALL,
+    PRECEDENCE_PRIMARY,
+} Precedence;
+
 static Result parse_module(Parser* parser, Module* dst);
 static Result parse_constant(Parser* parser, ConstantDef* dst);
 // range may be NULL
 static Result parse_expression(Parser* parser, ExpressionId* dst, Range* range);
-// parser must not be exhausted
+// range may be NULL
+static Result parse_expression_precedence(Parser* parser, Precedence precedence, ExpressionId* dst, Range* range);
 static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range);
+static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range* dst_range);
+static Result try_parse_expression_continue(
+    Parser* parser,
+    ExpressionId lhs,
+    Range lhs_range,
+    Precedence prev_precedence,
+    ExpressionId* dst,
+    Range* dst_range,
+    bool* parsed
+);
 // head token must be `fn`
 static Result parse_function(Parser* parser, Function* dst, Range* range);
 static Result parse_pattern(Parser* parser, Pattern* dst);
@@ -133,119 +152,8 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     return SUCCESS;
 }
 
-static Result parse_expression(Parser* parser, ExpressionId* dst, Range* range_dst) {
-    if (parser->pos == parser->tokens.tokens.len) {
-        return ERROR;
-    }
-
-    ExpressionId expr;
-    Range range;
-    parse_expression_head(parser, &expr, &range);
-
-    // parse function calls
-    while (true) {
-        if (parser->pos == parser->tokens.tokens.len) {
-            break;
-        }
-        if (parser->tokens.tokens.data[parser->pos].kind != TOKEN_PAREN_LEFT) {
-            break;
-        }
-        Range argument_range = range;
-        ExpressionId argument;
-        if (parse_expression(parser, &argument, &argument_range) != SUCCESS) {
-            return ERROR;
-        }
-        range.end = argument_range.end;
-        BinaryOperation function_call = {
-            .operator = OPERATION_FUNCTION_CALL,
-            .operand_left = expr,
-            .operand_right = argument,
-        };
-        expr = box_expression(parser, (Expression){
-            .kind = EXPRESSION_BINARY_OPERATION,
-            .as.binary_operation = function_call,
-            .range = range,
-            .type = TYPE_INVALID,
-        });
-    }
-
-    *dst = expr;
-    if (range_dst) {
-        *range_dst = range;
-    }
-
-    return SUCCESS;
-}
-
-static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range) {
-    Token head = parser->tokens.tokens.data[parser->pos];
-    Expression expr = { .type = TYPE_INVALID };
-
-    switch (head.kind) {
-    case TOKEN_PAREN_LEFT:;
-        usize start = parser->pos++;
-        parse_expression(parser, dst, NULL);
-        if (!parser_match(parser, TOKEN_PAREN_RIGHT, NULL)) {
-            return ERROR;
-        }
-        *dst_range = token_range_range(parser->tokens, (Range){ start, parser->pos });
-        return SUCCESS;
-
-    case TOKEN_FN:
-        expr.kind = EXPRESSION_FUNCTION;
-        if (
-            parse_function(parser, &expr.as.function, &expr.range)
-            != SUCCESS
-        ) {
-            return ERROR;
-        }
-        break;
-
-    case TOKEN_FALSE:
-        expr.kind = EXPRESSION_LITERAL_BOOL;
-        expr.as.literal_bool = false;
-        expr.range = token_range(parser->tokens, head);
-        parser->pos++;
-        break;
-    case TOKEN_TRUE:
-        expr.kind = EXPRESSION_LITERAL_BOOL;
-        expr.as.literal_bool = true;
-        expr.range = token_range(parser->tokens, head);
-        parser->pos++;
-        break;
-
-    case TOKEN_IDENTIFIER:
-        expr.kind = EXPRESSION_VARIABLE;
-        Identifier name;
-        // can't fail
-        parse_identifier(parser, &name);
-        expr.as.variable = (VariableRef){
-            .name = name,
-            .binding = BINDING_ID_INVALID,
-        };
-        expr.range = name.range;
-        break;
-
-    default:
-        // FIXME: report error
-        return ERROR;
-    }
-
-    ExpressionId id = parser->expressions.len;
-    if (expr.kind == EXPRESSION_FUNCTION) {
-        expr.as.function.function_id = parser->functions.len;
-        array_buf_push(usize)(&parser->functions, id);
-    }
-    array_buf_push(Expression)(&parser->expressions, expr);
-
-    *dst = id;
-    *dst_range = expr.range;
-
-    return SUCCESS;
-}
-
 static Result parse_function(Parser* parser, Function* dst, Range* range) {
-    usize start = parser->pos++;
+    usize start =  parser->pos++;
     Pattern input;
     if (parse_pattern(parser, &input) != SUCCESS) {
         return ERROR;
@@ -330,5 +238,232 @@ static Result parse_identifier(Parser* parser, Identifier* dst) {
         .string = string_slice(parser->source, range),
         .range = range,
     };
+    return SUCCESS;
+}
+
+static Result parse_expression(Parser* parser, ExpressionId* dst, Range* dst_range) {
+    return parse_expression_precedence(parser, PRECEDENCE_ANY, dst, dst_range);
+}
+
+static Result parse_expression_precedence(
+    Parser* parser,
+    Precedence prev_precedence,
+    ExpressionId* dst,
+    Range* dst_range
+) {
+    ExpressionId expr;
+    Range range;
+    if (parse_expression_head(parser, &expr, &range) != SUCCESS) {
+        return ERROR;
+    }
+
+    bool continued;
+    if (
+        try_parse_expression_continue(
+            parser,
+            expr,
+            range,
+            prev_precedence,
+            &expr,
+            &range,
+            &continued
+        ) != SUCCESS
+    ) {
+        return ERROR;
+    }
+
+    *dst = expr;
+    if (dst_range) {
+        *dst_range = range;
+    }
+
+    return SUCCESS;
+}
+
+Result try_parse_expression_continue(
+    Parser* parser,
+    ExpressionId lhs,
+    Range lhs_range,
+    Precedence prev_precedence,
+    ExpressionId* dst,
+    Range* dst_range,
+    bool* parsed
+) {
+    ExpressionId expr;
+
+    if (parser->pos == parser->tokens.tokens.len) {
+        *parsed = false;
+        return SUCCESS;
+    }
+    BinaryOperator operator;
+    Precedence operator_precedence;
+    usize new_parser_pos = parser->pos;
+    switch (parser->tokens.tokens.data[parser->pos].kind) {
+    case TOKEN_PAREN_LEFT:
+        operator = OPERATION_FUNCTION_CALL;
+        operator_precedence = PRECEDENCE_FUNCTION_CALL;
+        break;
+    case TOKEN_TUBE:
+        operator = OPERATION_OR;
+        operator_precedence = PRECEDENCE_LOGICAL_BINARY;
+        new_parser_pos++;
+        break;
+    case TOKEN_AMPERSAND:
+        operator = OPERATION_AND;
+        operator_precedence = PRECEDENCE_LOGICAL_BINARY;
+        new_parser_pos++;
+        break;
+    default:
+        *parsed = false;
+        return SUCCESS;
+    }
+
+    if (operator_precedence <= prev_precedence) {
+        *parsed = false;
+        return SUCCESS;
+    }
+    parser->pos = new_parser_pos;
+
+    ExpressionId rhs;
+    Range rhs_range;
+    if (parse_expression_precedence(parser, operator_precedence, &rhs, &rhs_range) != SUCCESS) {
+        return ERROR;
+    }
+
+    Range range = { lhs_range.start, rhs_range.end };
+    expr = box_expression(parser, (Expression){
+        .kind = EXPRESSION_BINARY_OPERATION,
+        .as.binary_operation = {
+            .operator = operator,
+            .operand_left = lhs,
+            .operand_right = rhs,
+        },
+        .range = range,
+        .type = TYPE_INVALID
+    });
+    *parsed = true;
+    bool continued;
+    if (
+        try_parse_expression_continue(
+            parser,
+            expr,
+            range, 
+            prev_precedence,
+            dst,
+            dst_range, 
+            &continued
+        ) != SUCCESS
+    ) {
+        return ERROR;
+    }
+
+    *dst = expr;
+    *dst_range = range;
+
+    return SUCCESS;
+}
+
+static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range) {
+    if (parser->pos == parser->tokens.tokens.len) {
+        return ERROR;
+    }
+
+    Token head = parser->tokens.tokens.data[parser->pos];
+    switch (head.kind) {
+    case TOKEN_BANG:;
+        parser->pos++;
+        ExpressionId operand;
+        Range operand_range;
+        if (
+            parse_expression_precedence(parser, PRECEDENCE_PREFIX, &operand, &operand_range)
+            != SUCCESS
+        ) {
+            return ERROR;
+        }
+        Range range = { head.pos, operand_range.end };
+        *dst = box_expression(parser, (Expression){
+            .kind = EXPRESSION_UNARY_OPERATION,
+            .as.unary_operation = {
+                .operator = OPERATION_NOT,
+                .operand = operand,
+            },
+            .range = range,
+            .type = TYPE_INVALID,
+        });
+        *dst_range = range;
+        return SUCCESS;
+    default:
+        return parse_expression_primary(parser, dst, dst_range);
+    }
+}
+
+static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range* dst_range) {
+    if (parser->pos == parser->tokens.tokens.len) {
+        return ERROR;
+    }
+
+    Token head = parser->tokens.tokens.data[parser->pos];
+    Expression expr = { .type = TYPE_INVALID };
+
+    switch (head.kind) {
+    case TOKEN_PAREN_LEFT:;
+        usize start = parser->pos++;
+        parse_expression(parser, dst, NULL);
+        if (!parser_match(parser, TOKEN_PAREN_RIGHT, NULL)) {
+            return ERROR;
+        }
+        *dst_range = token_range_range(parser->tokens, (Range){ start, parser->pos });
+        return SUCCESS;
+
+    case TOKEN_FN:
+        expr.kind = EXPRESSION_FUNCTION;
+        if (
+            parse_function(parser, &expr.as.function, &expr.range)
+            != SUCCESS
+        ) {
+            return ERROR;
+        }
+        break;
+
+    case TOKEN_FALSE:
+        expr.kind = EXPRESSION_LITERAL_BOOL;
+        expr.as.literal_bool = false;
+        expr.range = token_range(parser->tokens, head);
+        parser->pos++;
+        break;
+    case TOKEN_TRUE:
+        expr.kind = EXPRESSION_LITERAL_BOOL;
+        expr.as.literal_bool = true;
+        expr.range = token_range(parser->tokens, head);
+        parser->pos++;
+        break;
+
+    case TOKEN_IDENTIFIER:
+        expr.kind = EXPRESSION_VARIABLE;
+        Identifier name;
+        // can't fail
+        parse_identifier(parser, &name);
+        expr.as.variable = (VariableRef){
+            .name = name,
+            .binding = BINDING_ID_INVALID,
+        };
+        expr.range = name.range;
+        break;
+
+    default:
+        // FIXME: report error
+        return ERROR;
+    }
+
+    ExpressionId id = parser->expressions.len;
+    if (expr.kind == EXPRESSION_FUNCTION) {
+        expr.as.function.function_id = parser->functions.len;
+        array_buf_push(usize)(&parser->functions, id);
+    }
+    array_buf_push(Expression)(&parser->expressions, expr);
+
+    *dst = id;
+    *dst_range = expr.range;
+
     return SUCCESS;
 }
