@@ -35,6 +35,7 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function);
 static void analyze_pattern(Analyzer* analyzer, Pattern* pattern);
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression(Analyzer* analyzer, Expression* expression);
+static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, TypeId* dst);
 static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, TypeId* dst);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
@@ -253,8 +254,32 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
         expression->type = TYPE_BOOL;
         break;
 
+    case EXPRESSION_UNARY_OPERATION:
+        analyze_unary_operation(analyzer, &expression->as.unary_operation, &expression->type);
+        break;
+
     case EXPRESSION_BINARY_OPERATION:
         analyze_binary_operation(analyzer, &expression->as.binary_operation, &expression->type);
+        break;
+    }
+}
+
+static void analyze_unary_operation(
+    Analyzer* analyzer,
+    UnaryOperation* unary_operation,
+    TypeId* dst
+) {
+    Expression* operand = &analyzer->expressions[unary_operation->operand];
+    analyze_expression(analyzer, operand);
+
+    switch (unary_operation->operator) {
+    case OPERATION_NOT:
+        if (operand->type != TYPE_BOOL) {
+            // TODO: error handling
+            exit(-1);
+        }
+        *dst = TYPE_BOOL;
+        break;
     }
 }
 
@@ -280,6 +305,15 @@ static void analyze_binary_operation(
             // TODO: error handling
         }
         *dst = lhs_type.as.function.output;
+        break;
+
+    case OPERATION_OR:
+    case OPERATION_AND:;
+        if (lhs->type != TYPE_BOOL || rhs->type != TYPE_BOOL) {
+            // TODO: error handling
+        }
+        *dst = TYPE_BOOL;
+        break;
     }
 }
 

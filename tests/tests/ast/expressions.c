@@ -3,7 +3,7 @@
 int main(int argc, char const** argv) {
     Ast ast = source_to_ast(STRING_LITERAL(
         "id :: fn a: Bool -> Bool => a;"
-        "logical :: fn b: Bool -> Bool => !b & id(true);"
+        "logical :: fn b: Bool -> Bool => !b & id(true) | false;"
     ));
     assert(ast.root.global_constants.len == 2);
     ConstantDef logical_def = ast.root.global_constants.data[1];
@@ -11,12 +11,16 @@ int main(int argc, char const** argv) {
     Expression logical_expr = ast.expressions.data[logical_def.value];
     assert(logical_expr.kind == EXPRESSION_FUNCTION);
     Function logical_fn = logical_expr.as.function;
+
+    Expression or = ast.expressions.data[logical_fn.output];
+    assert(or.kind == EXPRESSION_BINARY_OPERATION);
+    assert(or.as.binary_operation.operator == OPERATION_OR);
     
-    Expression combo = ast.expressions.data[logical_fn.output];
-    assert(combo.kind == EXPRESSION_BINARY_OPERATION);
-    assert(combo.as.binary_operation.operator = OPERATION_AND);
+    Expression and = ast.expressions.data[or.as.binary_operation.operand_left];
+    assert(and.kind == EXPRESSION_BINARY_OPERATION);
+    assert(and.as.binary_operation.operator = OPERATION_AND);
     
-    Expression not = ast.expressions.data[combo.as.binary_operation.operand_left];
+    Expression not = ast.expressions.data[and.as.binary_operation.operand_left];
     assert(not.kind == EXPRESSION_UNARY_OPERATION);
     assert(not.as.unary_operation.operator == OPERATION_NOT);
     
@@ -24,7 +28,7 @@ int main(int argc, char const** argv) {
     assert(b_ref.kind == EXPRESSION_VARIABLE);
     assert(eq(String)(b_ref.as.variable.name.string, STRING_LITERAL("b")));
 
-    Expression call = ast.expressions.data[combo.as.binary_operation.operand_right];
+    Expression call = ast.expressions.data[and.as.binary_operation.operand_right];
     assert(call.kind == EXPRESSION_BINARY_OPERATION);
     assert(call.as.binary_operation.operator == OPERATION_FUNCTION_CALL);
     
@@ -35,6 +39,10 @@ int main(int argc, char const** argv) {
     Expression tr = ast.expressions.data[call.as.binary_operation.operand_right];
     assert(tr.kind == EXPRESSION_LITERAL_BOOL);
     assert(tr.as.literal_bool == true);
+
+    Expression fa = ast.expressions.data[or.as.binary_operation.operand_right];
+    assert(fa.kind == EXPRESSION_LITERAL_BOOL);
+    assert(fa.as.literal_bool == false);
 
     return 0;
 }

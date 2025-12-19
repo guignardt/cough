@@ -10,6 +10,7 @@ typedef struct Generator {
 static void generate_function(Generator gen, Function function);
 static void generate_pattern_match(Generator gen, Pattern pattern);
 static void generate_expression(Generator gen, Expression expression);
+static void generate_unary_operation(Generator gen, UnaryOperation unary_operation);
 static void generate_binary_operation(Generator gen, BinaryOperation binary_operation);
 
 void generate(Ast* ast, Emitter* emitter) {
@@ -82,14 +83,31 @@ static void generate_expression(Generator gen, Expression expression) {
         break;
 
     case EXPRESSION_LITERAL_BOOL:
+        // all 0s for false, all 1s for true
+        // this ensures `not` works correctly as the VM doesn't use a dedicated
+        // boolean type, and instead uses `UInt`.
         emit(sca)(
             gen.emitter,
-            (Word){ .as_uint = expression.as.literal_bool }
+            (Word){ .as_uint = -expression.as.literal_bool }
         );
+        break;
+
+    case EXPRESSION_UNARY_OPERATION:
+        generate_unary_operation(gen, expression.as.unary_operation);
         break;
 
     case EXPRESSION_BINARY_OPERATION:
         generate_binary_operation(gen, expression.as.binary_operation);
+        break;
+    }
+}
+
+static void generate_unary_operation(Generator gen, UnaryOperation unary_operation) {
+    Expression operand = gen.expressions[unary_operation.operand];
+    generate_expression(gen, operand);
+    switch (unary_operation.operator) {
+    case OPERATION_NOT:
+        emit(not)(gen.emitter);
         break;
     }
 }
@@ -103,6 +121,18 @@ static void generate_binary_operation(Generator gen, BinaryOperation binary_oper
         generate_expression(gen, rhs);
         generate_expression(gen, lhs);
         emit(cal)(gen.emitter);
+        break;
+
+    case OPERATION_OR:
+        generate_expression(gen, lhs);
+        generate_expression(gen, rhs);
+        emit(lor)(gen.emitter);
+        break;
+
+    case OPERATION_AND:
+        generate_expression(gen, lhs);
+        generate_expression(gen, rhs);
+        emit(and)(gen.emitter);
         break;
     }
 }

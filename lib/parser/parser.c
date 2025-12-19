@@ -349,8 +349,8 @@ Result try_parse_expression_continue(
             expr,
             range, 
             prev_precedence,
-            dst,
-            dst_range, 
+            &expr,
+            &range, 
             &continued
         ) != SUCCESS
     ) {

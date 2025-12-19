@@ -236,19 +236,29 @@ static ControlFlow op_jnz(Vm* vm, usize dst) {
     return FLOW_CONTINUE;
 }
 
-// LHS is upper value, RHS is lower value
-#define IMPL_OP_COMPARE(mnemo, type, op)                        \
+static ControlFlow op_not(Vm* vm) {
+    push(vm, (Word){ .as_uint = ~pop(vm).as_uint });
+    return FLOW_CONTINUE;
+}
+
+// LHS is lower value, RHS is upper value
+#define IMPL_OP_BINARY(mnemo, inty, outty, op)                        \
     static ControlFlow op_##mnemo(Vm* vm) {                     \
+        Word rhs = pop(vm);                                     \
+        Word lhs = pop(vm);                                     \
         push(vm, (Word){                                        \
-            .as_uint = pop(vm).as_##type op pop(vm).as_##type   \
+            .as_##outty = lhs.as_##inty op rhs.as_##inty        \
         });                                                     \
         return FLOW_CONTINUE;                                   \
     }
 
-IMPL_OP_COMPARE(equ, uint, ==);
-IMPL_OP_COMPARE(neu, uint, !=);
-IMPL_OP_COMPARE(geu, uint, <=);
-IMPL_OP_COMPARE(gtu, uint, <);
+IMPL_OP_BINARY(equ, uint, uint, ==);
+IMPL_OP_BINARY(neu, uint, uint, !=);
+IMPL_OP_BINARY(geu, uint, uint, >=);
+IMPL_OP_BINARY(gtu, uint, uint, >);
+
+IMPL_OP_BINARY(lor, uint, uint, |);
+IMPL_OP_BINARY(and, uint, uint, |);
 
 static ControlFlow op_adu(Vm* vm) {
     push(vm, (Word){

@@ -17,9 +17,11 @@ cough_test(test_ast_functions ast/functions.c)
 cough_test(test_ast_expressions ast/expressions.c)
 
 cough_test(test_generator_functions generator/functions.c)
+cough_test(test_generator_expression generator/expression.c)
 
 cough_test(test_assembler assembler/assembler.c)
 
 cough_test(test_vm_function_call vm/function_call.c)
 cough_test(test_vm_conditional vm/conditional.c)
 cough_test(test_vm_fibonacci vm/fibonacci.c)
+cough_test(test_vm_expression vm/expression.c)
