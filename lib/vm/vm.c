@@ -258,7 +258,8 @@ IMPL_OP_BINARY(geu, uint, uint, >=);
 IMPL_OP_BINARY(gtu, uint, uint, >);
 
 IMPL_OP_BINARY(lor, uint, uint, |);
-IMPL_OP_BINARY(and, uint, uint, |);
+IMPL_OP_BINARY(and, uint, uint, &);
+IMPL_OP_BINARY(xor, uint, uint, ^);
 
 static ControlFlow op_adu(Vm* vm) {
     push(vm, (Word){

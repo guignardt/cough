@@ -22,7 +22,7 @@ int main(int argc, const char* argv[]) {
         "   sys exit",
         "",
         ":combo",
-        "   res 2",
+        "   res 1",
         "   set %0",
         "   var %0",
         "   sca 0",

@@ -101,11 +101,14 @@ typedef enum Opcode {
     /// @brief `not` -- compute the bitwise not of a value.
     OP_NOT,
 
-    /// @brief `lor` -- compute the bitwise or of a value.
+    /// @brief `lor` -- compute the bitwise or of two values.
     OP_LOR,
 
-    /// @brief `and` -- compute the bitwise and of a value.
+    /// @brief `and` -- compute the bitwise and of two values.
     OP_AND,
+
+    /// @brief `and` -- compute the bitwise exclusiv or of two values.
+    OP_XOR,
 
     /// @brief `adu` -- add two `UInt`s together. Pops the two values at the
     /// top of the stack and pushes their sum.
@@ -187,6 +190,7 @@ void bytecode_write_location_at(Byteword** ip, usize symbol);
     proc(OP_NOT, not)           \
     proc(OP_LOR, lor)           \
     proc(OP_AND, and)           \
+    proc(OP_XOR, xor)           \
     proc(OP_ADU, adu)           \
 
 #define FOR_SYSCALLS(proc)      \

@@ -89,6 +89,7 @@ typedef enum BinaryOperator {
     OPERATION_FUNCTION_CALL,
     OPERATION_OR,
     OPERATION_AND,
+    OPERATION_XOR,
 } BinaryOperator;
 
 typedef struct BinaryOperation {
