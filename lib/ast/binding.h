@@ -7,6 +7,7 @@
 typedef struct TypeBinding {
     String name;
     TypeId type;
+    Range source_definition;
 } TypeBinding;
 
 typedef enum ValueStoreKind {
@@ -31,6 +32,7 @@ typedef struct ValueBinding {
     String name;
     TypeId type;
     ValueStore store;
+    Range source_definition;
 } ValueBinding;
 
 typedef struct ScopeLocation {

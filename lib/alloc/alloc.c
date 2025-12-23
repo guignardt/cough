@@ -15,7 +15,7 @@ Errno try_malloc(usize size, void** dst) {
 
 void* malloc_or_exit(usize size) {
     void* ptr;
-    exit_on_errno_or(try_malloc(size, &ptr), "memory allocation failed");
+    log_errno_or(try_malloc(size, &ptr), "memory allocation failed");
     return ptr;
 }
 
@@ -30,6 +30,6 @@ Errno try_realloc(void** ptr, usize new_size) {
 }
 
 void* realloc_or_exit(void* ptr, usize size) {
-    exit_on_errno_or(try_realloc(&ptr, size), "memory allocation failed");
+    log_errno_or(try_realloc(&ptr, size), "memory allocation failed");
     return ptr;
 }

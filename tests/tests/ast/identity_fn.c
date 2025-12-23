@@ -14,7 +14,8 @@ int main(int argc, char const *argv[]) {
 
     TypeId fn_bool_bool_type = get_or_register_function_type(
         &ast.types,
-        (FunctionType){ .input = TYPE_BOOL, .output = TYPE_BOOL }
+        (FunctionType){ .input = TYPE_BOOL, .output = TYPE_BOOL },
+        &ast.storage
     );
     assert(identity_def.type == fn_bool_bool_type);
 

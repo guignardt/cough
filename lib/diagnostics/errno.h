@@ -6,5 +6,5 @@ typedef int Errno;
 
 #define DUMMY_ERRNO ((Errno)0xAAAAAAAA)
 
-void exit_on_errno(Errno err);
-void exit_on_errno_or(Errno err, const char* unknown_msg);
+void log_errno(Errno err);
+void log_errno_or(Errno err, const char* unknown_msg);

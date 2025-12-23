@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "analyzer/analyzer.h"
 #include "diagnostics/result.h"
 
@@ -12,6 +14,112 @@ typedef struct Analyzer {
     usize function_id;
     AstStorage* storage;
 } Analyzer;
+
+static void unavailable_name(Analyzer* analyzer, Identifier ident, BindingMut binding) {
+    StringBuf note;
+    Range def_range;
+    switch (binding.kind) {
+    case BINDING_TYPE:;
+        note = format("note: a type with the same name was defined here:");
+        def_range = binding.as.type->source_definition;
+        break;
+    case BINDING_VALUE:
+        note = format("note: a constant with the same name was defined here:");
+        def_range = binding.as.value->source_definition;
+    }
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_DUPLICATE_BINDING_NAME);
+    report_message(
+        analyzer->reporter,
+        format("unavailable binding name `%.*s`", (int)ident.string.len, ident.string.data)
+    );
+    report_source_code(analyzer->reporter, ident.range);
+    report_message(analyzer->reporter, note);
+    report_source_code(analyzer->reporter, def_range);
+    report_end(analyzer->reporter);
+}
+
+static void expected_constant(Analyzer* analyzer, Expression expr) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_EXPECTED_CONSTANT);
+    report_message(analyzer->reporter, format("expected constant expression"));
+    report_source_code(analyzer->reporter, expr.range);
+    report_end(analyzer->reporter);
+}
+
+static void constant_function_missing_explicit_return_type(Analyzer* analyzer, Function expr) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_IMPLICIT_TYPE);
+    report_message(analyzer->reporter, format("expected explicit return type in constant function"));
+    report_source_code(analyzer->reporter, expr.signature_range);
+    report_end(analyzer->reporter);
+}
+
+static void mismatched_types(
+    Analyzer* analyzer,
+    TypeId expected,
+    bool explicit_constraint,
+    Range expected_source,
+    TypeId found,
+    Range found_range
+) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_MISMATCHED_TYPES);
+    String expected_name = get_type(*analyzer->types, expected).pretty_name;
+    String found_name = get_type(*analyzer->types, found).pretty_name;
+    report_message(analyzer->reporter, format(
+        "mismatched types: expected value of type `%.*s`, found `%.*s`",
+        (int)expected_name.len, expected_name.data,
+        (int)found_name.len, found_name.data
+    ));
+    report_source_code(analyzer->reporter, found_range);
+    if (explicit_constraint) {
+        report_message(analyzer->reporter, format("note: type constraint here:"));
+        report_source_code(analyzer->reporter, expected_source);
+    }
+    report_end(analyzer->reporter);
+}
+
+static void binding_not_found(Analyzer* analyzer, Identifier name) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_BINDING_NOT_FOUND);
+    report_message(analyzer->reporter, format(
+        "no binding with name `%.*s` in the current scope",
+        (int)name.string.len, name.string.data
+    ));
+    report_source_code(analyzer->reporter, name.range);
+    report_end(analyzer->reporter);
+}
+
+static void binding_not_type(Analyzer* analyzer, Identifier name, Binding binding) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_INVALID_BINDING_KIND);
+    report_message(analyzer->reporter, format(
+        "expected type, found value binding `%.*s`",
+        (int)name.string.len, name.string.data
+    ));
+    report_source_code(analyzer->reporter, name.range);
+    report_message(analyzer->reporter, format("note: this binding was defined here:"));
+    report_source_code(analyzer->reporter, binding.as.value.source_definition);
+    report_end(analyzer->reporter);
+}
+
+static void binding_not_value(Analyzer* analyzer, Identifier name, Binding binding) {
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_INVALID_BINDING_KIND);
+    report_message(analyzer->reporter, format(
+        "expected value, found type binding `%.*s`",
+        (int)name.string.len, name.string.data
+    ));
+    report_source_code(analyzer->reporter, name.range);
+    report_message(analyzer->reporter, format("note: this binding was defined here:"));
+    report_source_code(analyzer->reporter, binding.as.type.source_definition);
+    report_end(analyzer->reporter);
+}
+
+static void called_non_function(Analyzer* analyzer, TypeId type, Range range) {
+    String name = get_type(*analyzer->types, type).pretty_name;
+    report_start(analyzer->reporter, SEVERITY_ERROR, CE_MISMATCHED_TYPES);
+    report_message(analyzer->reporter, format(
+        "tried to call non-function value of type `%.*s`",
+        (int)name.len, name.data
+    ));
+    report_source_code(analyzer->reporter, range);
+    report_end(analyzer->reporter);
+}
 
 static Analyzer with_scope_location(Analyzer analyzer, ScopeLocation scope_location) {
     return (Analyzer){
@@ -35,8 +143,8 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function);
 static void analyze_pattern(Analyzer* analyzer, Pattern* pattern);
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression(Analyzer* analyzer, Expression* expression);
-static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, TypeId* dst);
-static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, TypeId* dst);
+static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range, TypeId* dst);
+static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range, TypeId* dst);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
@@ -91,6 +199,7 @@ static void register_constant_def(Analyzer* analyzer, ConstantDef* constant_def)
             .kind = VALUE_STORE_CONSTANT,
             .as.constant = constant_def->value,
         },
+        .source_definition = constant_def->range,
     };
     BindingMut slot;
     if (!insert_value_binding(
@@ -99,7 +208,7 @@ static void register_constant_def(Analyzer* analyzer, ConstantDef* constant_def)
         binding,
         &slot
     )) {
-        // TODO: error handling
+        unavailable_name(analyzer, constant_def->name, slot);
         return;
     }
     constant_def->binding = slot.id;
@@ -128,7 +237,7 @@ static void type_constant_def(Analyzer* analyzer, ConstantDef* constant_def) {
                 .input = function->input.type,
                 .output = function->output_type,
             };
-            TypeId type_id = get_or_register_function_type(analyzer->types, type);
+            TypeId type_id = get_or_register_function_type(analyzer->types, type, analyzer->storage);
             value->type = type_id;
             constant_def->type = type_id;
             ValueBinding* binding = get_binding_mut(
@@ -140,7 +249,7 @@ static void type_constant_def(Analyzer* analyzer, ConstantDef* constant_def) {
         break;
 
     default:
-        // TODO: error handling
+        expected_constant(analyzer, *value);
         return;
     }
 }
@@ -165,7 +274,7 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function) {
     analyze_pattern(&function_analyzer, &function->input);
 
     if (!function->explicit_output_type) {
-        // TODO: error handling;
+        constant_function_missing_explicit_return_type(analyzer, *function);
         return;
     }
     resolve_type(analyzer, function->output_type_name, &function->output_type);
@@ -177,10 +286,12 @@ static void analyze_pattern(Analyzer* parent, Pattern* pattern) {
     Analyzer analyzer = with_scope_location(*parent, scope);
 
     TypeId inner_type = TYPE_INVALID;
+    Range inner_range;
     switch (pattern->kind) {
     case PATTERN_VARIABLE:
         analyze_variable_def(&analyzer, &pattern->as.variable);
         inner_type = pattern->as.variable.type;
+        inner_range = pattern->as.variable.range;
         break;
     }
 
@@ -194,7 +305,16 @@ static void analyze_pattern(Analyzer* parent, Pattern* pattern) {
         && inner_type != TYPE_INVALID
         && pattern->type != inner_type
     ) {
-        // TODO: error handling
+        // pattern is explicitly typed: see conditional above
+        // range is set as we parsed an inner pattern
+        mismatched_types(
+            &analyzer,
+            pattern->type,
+            true,
+            pattern->type_name.range,
+            inner_type,
+            inner_range
+        );
         if (!pattern->explicitly_typed) {
             pattern->type = inner_type;
         }
@@ -203,7 +323,12 @@ static void analyze_pattern(Analyzer* parent, Pattern* pattern) {
 
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) {
     if (!variable_def->explicitly_typed) {
-        // TODO: error handling
+        // currently, all variables are parsed as having an explicit type
+        log_error(
+            "variable `%.*s` wasn't explicity types (internal error)",
+            (int)variable_def->name.string.len, variable_def->name.string.data
+        );
+        exit(-1);
         return;
     }
     resolve_type(analyzer, variable_def->type_name, &variable_def->type);
@@ -217,6 +342,7 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
                 .function_id = analyzer->function_id,
             },
         },
+        .source_definition = variable_def->range,
     };
     BindingMut binding_entry;
     if (!push_value_binding(
@@ -225,7 +351,7 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
         binding,
         &binding_entry
     )) {
-        // TODO: error handling
+        unavailable_name(analyzer, variable_def->name, binding_entry);
         return;
     }
     variable_def->binding = binding_entry.id;
@@ -246,7 +372,7 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
             .input = expression->as.function.input.type,
             .output = expression->as.function.output_type,
         };
-        TypeId type_id = get_or_register_function_type(analyzer->types, type);
+        TypeId type_id = get_or_register_function_type(analyzer->types, type, analyzer->storage);
         expression->type = type_id;
         break;
 
@@ -255,11 +381,11 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
         break;
 
     case EXPRESSION_UNARY_OPERATION:
-        analyze_unary_operation(analyzer, &expression->as.unary_operation, &expression->type);
+        analyze_unary_operation(analyzer, &expression->as.unary_operation, expression->range, &expression->type);
         break;
 
     case EXPRESSION_BINARY_OPERATION:
-        analyze_binary_operation(analyzer, &expression->as.binary_operation, &expression->type);
+        analyze_binary_operation(analyzer, &expression->as.binary_operation, expression->range, &expression->type);
         break;
     }
 }
@@ -267,6 +393,7 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
 static void analyze_unary_operation(
     Analyzer* analyzer,
     UnaryOperation* unary_operation,
+    Range range,
     TypeId* dst
 ) {
     Expression* operand = &analyzer->expressions[unary_operation->operand];
@@ -274,9 +401,15 @@ static void analyze_unary_operation(
 
     switch (unary_operation->operator) {
     case OPERATION_NOT:
-        if (operand->type != TYPE_BOOL) {
-            // TODO: error handling
-            exit(-1);
+        if (operand->type != TYPE_BOOL && operand->type != TYPE_INVALID) {
+            mismatched_types(
+                analyzer,
+                TYPE_BOOL,
+                true,
+                range,
+                operand->type,
+                operand->range
+            );
         }
         *dst = TYPE_BOOL;
         break;
@@ -286,6 +419,7 @@ static void analyze_unary_operation(
 static void analyze_binary_operation(
     Analyzer* analyzer,
     BinaryOperation* binary_operation,
+    Range range,
     TypeId* dst
 ) {
     Expression* lhs = &analyzer->expressions[binary_operation->operand_left];
@@ -295,22 +429,51 @@ static void analyze_binary_operation(
 
     switch (binary_operation->operator) {
     case OPERATION_FUNCTION_CALL:;
+        if (lhs->type == TYPE_INVALID) {
+            return;
+        }
         Type lhs_type = get_type(*analyzer->types, lhs->type);
         if (lhs_type.kind != TYPE_FUNCTION) {
-            // TODO: error handling
-            log_error("tried to call non-function value");
-            exit(-1);
+            called_non_function(analyzer, lhs->type, lhs->range);
+            return;
         }
         if (lhs_type.as.function.input != rhs->type) {
-            // TODO: error handling
+            mismatched_types(
+                analyzer,
+                lhs_type.as.function.input,
+                false,
+                (Range){0},
+                rhs->type,
+                rhs->range
+            );
         }
         *dst = lhs_type.as.function.output;
         break;
 
     case OPERATION_OR:
-    case OPERATION_AND:;
+    case OPERATION_AND:
+    case OPERATION_XOR:;
         if (lhs->type != TYPE_BOOL || rhs->type != TYPE_BOOL) {
-            // TODO: error handling
+            if (lhs->type != TYPE_INVALID) {
+                mismatched_types(
+                    analyzer,
+                    TYPE_BOOL,
+                    false,
+                    (Range){0},
+                    lhs->type,
+                    lhs->range
+                );
+            }
+            if (rhs->type != TYPE_INVALID) {
+                mismatched_types(
+                    analyzer,
+                    TYPE_BOOL,
+                    false,
+                    (Range){0},
+                    rhs->type,
+                    rhs->range
+                );
+            }
         }
         *dst = TYPE_BOOL;
         break;
@@ -325,20 +488,19 @@ static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref) 
         variable_ref->name.string,
         &binding_id
     )) {
-        // TODO: error handling
+        binding_not_found(analyzer, variable_ref->name);
         return;
     }
     // FIXME: use the binding id directly?
     Binding binding = get_binding(*analyzer->bindings, binding_id);
     if (binding.kind != BINDING_VALUE) {
-        // TODO: error handling
+        binding_not_value(analyzer, variable_ref->name, binding);
         return;
     }
     if (binding.as.value.store.kind == VALUE_STORE_VARIABLE) {
         if (binding.as.value.store.as.variable.function_id != analyzer->function_id) {
-            // TODO: error handling
-            log_error("variable accessed outside of function");
-            exit(-1);
+            binding_not_found(analyzer, variable_ref->name);
+            return;
         }
     }
     variable_ref->binding = binding_id;
@@ -355,8 +517,17 @@ static void analyze_function_body(Analyzer* parent, Function* function) {
     analyzer.function_id = function->function_id;
     Expression* output = &analyzer.expressions[function->output];
     analyze_expression(&analyzer, output);
-    if (output->type != function->output_type) {
-        // TODO: error handling
+    if (output->type != function->output_type && output->type != TYPE_INVALID) {
+        // currently, all functions have an explicit return type
+        assert(function->explicit_output_type);
+        mismatched_types(
+            &analyzer,
+            function->output_type,
+            true,
+            function->output_type_name.range,
+            output->type,
+            output->range
+        );
     }
 }
 
@@ -370,12 +541,12 @@ static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst) {
             name.as.identifier.string,
             &binding_id
         )) {
-            // TODO: error handling
+            binding_not_found(analyzer, name.as.identifier);
             return;
         }
         Binding binding = get_binding(*analyzer->bindings, binding_id);
         if (binding.kind != BINDING_TYPE) {
-            // TODO: error handling
+            binding_not_type(analyzer, name.as.identifier, binding);
             return;
         }
         *dst = binding.as.type.type;

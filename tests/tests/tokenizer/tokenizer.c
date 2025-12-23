@@ -5,7 +5,7 @@
 #include "tests/common.h"
 
 int main(int argc, char const* argv[]) {
-    char const* source = "() : ::= := -> =>;!|& ^ hello let fn \n false true";
+    char const* source = "() : :: = := -> => ; ! | & ^ hello let fn \n false true";
     TestReporter reporter = test_reporter_new();
 
     TokenStream tokens;

@@ -28,7 +28,7 @@ StringBuf format(char const* fmt, ...) {
     errno = 0;
     int len = vsnprintf(NULL, 0, fmt, args);
     if (len < 0) {
-        exit_on_errno(errno);
+        log_errno(errno);
         exit(-1);
     }
     va_end(args);
@@ -37,7 +37,7 @@ StringBuf format(char const* fmt, ...) {
     string_buf_reserve(&buf, len);
     errno = 0;
     if (vsnprintf(buf.data, buf.capacity, fmt, args2) < 0) {
-        exit_on_errno(errno);
+        log_errno(errno);
         exit(-1);
     }
     va_end(args2);

@@ -4,7 +4,6 @@
 
 typedef enum RuntimeErrorKind {
     RE_INVALID_INSTRUCTION,
-    RE_INVALID_SYSCALL,
     RE_INTEGER_OVERFLOW,
 } RuntimeErrorKind;
 

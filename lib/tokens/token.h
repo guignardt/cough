@@ -28,12 +28,25 @@ typedef enum TokenKind {
     TOKEN_TRUE,
 } TokenKind;
 
+#define TOKEN_PUNCT_START   TOKEN_PAREN_LEFT
+#define TOKEN_PUNCT_LAST    TOKEN_HAT
+#define TOKEN_KEYWORD_START TOKEN_LET
+#define TOKEN_KEYWORD_LAST  TOKEN_TRUE
+
 typedef struct Token {
     TokenKind kind;
     usize pos;
 } Token;
 
 DECL_ARRAY_BUF(Token)
+
+typedef struct TokenKindDescription {
+    usize len; // -1 when length isn't fixed
+    char const* exact_chars;
+    char const* pretty_description;
+} TokenKindDescription;
+
+TokenKindDescription token_kind_description(TokenKind token_kind);
 
 typedef struct TokenStream {
     String source;

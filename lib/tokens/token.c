@@ -7,28 +7,34 @@ void token_stream_free(TokenStream* token_stream) {
     hash_map_free(usize, usize)(&token_stream->_end_pos);
 }
 
-static usize token_len[] = {
-    [TOKEN_PAREN_LEFT] = 1,
-    [TOKEN_PAREN_RIGHT] = 1,
-    [TOKEN_COLON] = 1,
-    [TOKEN_COLON_COLON] = 2,
-    [TOKEN_EQUAL] = 1,
-    [TOKEN_COLON_EQUAL] = 2,
-    [TOKEN_ARROW] = 2,
-    [TOKEN_DOUBLE_ARROW] = 2,
-    [TOKEN_SEMICOLON] = 1,
+static TokenKindDescription token_kind_table[] = {
+    [TOKEN_PAREN_LEFT] =    {   1,  "(",        "`(`"           },
+    [TOKEN_PAREN_RIGHT] =   {   1,  ")",        "`)`"           },
+    [TOKEN_COLON] =         {   1,  ":",        "`:`"           },
+    [TOKEN_COLON_COLON] =   {   2,  "::",       "`::`"          },
+    [TOKEN_EQUAL] =         {   1,  "=",        "`=`"           },
+    [TOKEN_COLON_EQUAL] =   {   2,  ":=",       "`:=`"          },
+    [TOKEN_ARROW] =         {   2,  "->",       "`->`"          },
+    [TOKEN_DOUBLE_ARROW] =  {   2,  "=>",       "`=>`"          },
+    [TOKEN_SEMICOLON] =     {   1,  ";",        "`;`"           },
 
-    [TOKEN_BANG] = 1,
-    [TOKEN_AMPERSAND] = 1,
-    [TOKEN_TUBE] = 1,
-    [TOKEN_HAT] = 1,
+    [TOKEN_BANG] =          {   1,  "!",        "`!`"           },
+    [TOKEN_TUBE] =          {   1,  "|",        "`|`"           },
+    [TOKEN_AMPERSAND] =     {   1,  "&",        "`&`"           },
+    [TOKEN_HAT] =           {   1,  "^",        "`^`"           },
 
-    [TOKEN_IDENTIFIER] = -1,
+    [TOKEN_IDENTIFIER] =    {   -1, NULL,       "<identifier>"  },
 
-    [TOKEN_FN] = 2,
-    [TOKEN_FALSE] = 5,
-    [TOKEN_TRUE] = 4,
+    [TOKEN_LET] =           {   3,  "let",      "`let`"         },
+    [TOKEN_FN] =            {   2,  "fn",       "`fn`"          },
+    [TOKEN_FALSE] =         {   5,  "false",    "`false`"       },
+    [TOKEN_TRUE] =          {   4,  "true",     "`true`"        },
 };
+
+TokenKindDescription token_kind_description(TokenKind token_kind) {
+    return token_kind_table[token_kind];
+}
+
 
 Range token_range(TokenStream stream, Token token) {
     usize end_pos;
@@ -38,7 +44,7 @@ Range token_range(TokenStream stream, Token token) {
         break;
 
     default:
-        end_pos = token.pos + token_len[token.kind];
+        end_pos = token.pos + token_kind_description(token.kind).len;
         break;
     }
     return (Range){ token.pos, end_pos };

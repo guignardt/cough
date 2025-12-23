@@ -13,50 +13,27 @@ typedef struct Tokenizer {
 
 static void invalid_token(Tokenizer* tokenizer, usize start) {
     Reporter* reporter = tokenizer->reporter;
-    // FIXME: error code
-    report_start(reporter, SEVERITY_ERROR, 0);
+    report_start(reporter, SEVERITY_ERROR, CE_INVALID_TOKEN);
     report_message(reporter, format("invalid token"));
     report_source_code(reporter, (Range){ start, tokenizer->pos });
     report_end(reporter);
     tokenizer->error = true;
 }
 
-typedef struct ExactToken {
-    char pattern[8];
-    TokenKind kind;
-} ExactToken;
-
-static ExactToken punctuation[] = {
-    { "(", TOKEN_PAREN_LEFT },
-    { ")", TOKEN_PAREN_RIGHT },
-    { ":", TOKEN_COLON },
-    { "::", TOKEN_COLON_COLON },
-    { "=", TOKEN_EQUAL },
-    { ":=", TOKEN_COLON_EQUAL },
-    { "->", TOKEN_ARROW },
-    { "=>", TOKEN_DOUBLE_ARROW },
-    { ";", TOKEN_SEMICOLON },
-
-    { "!", TOKEN_BANG },
-    { "&", TOKEN_AMPERSAND },
-    { "|", TOKEN_TUBE },
-    { "^", TOKEN_HAT },
-};
-
 static void tokenize_punctuation(Tokenizer* tokenizer) {
     usize max_len = 0;
     TokenKind kind;
-    for (usize i = 0; i < sizeof(punctuation) / sizeof(ExactToken); i++) {
-        ExactToken pattern = punctuation[i];
+    // all `TokenKind` values < `TOKEN_IDENTIFIER` are 'punctuation'
+    for (usize i = TOKEN_PUNCT_START; i <= TOKEN_PUNCT_LAST; i++) {
+        TokenKindDescription desc = token_kind_description(i);
         if (!strncmp(
-            pattern.pattern,
+            desc.exact_chars,
             tokenizer->source.data + tokenizer->pos,
-            strlen(pattern.pattern)
+            desc.len
         )) {
-            usize len = strlen(pattern.pattern);
-            if (len > max_len) {
-                max_len = len;
-                kind = pattern.kind;
+            if (desc.len > max_len) {
+                max_len = desc.len;
+                kind = i;
             }
         }
     }
@@ -69,13 +46,6 @@ static void tokenize_punctuation(Tokenizer* tokenizer) {
         array_buf_push(Token)(&tokenizer->dst->tokens, token);
     }
     tokenizer->pos += max_len;
-};
-
-static ExactToken keywords[] = {
-    { .pattern = "let", .kind = TOKEN_LET },
-    { .pattern = "fn", .kind = TOKEN_FN },
-    { .pattern = "true", .kind = TOKEN_TRUE },
-    { .pattern = "false", .kind = TOKEN_FALSE },
 };
 
 // first character must be alphabetic or `_`
@@ -92,10 +62,11 @@ static void tokenize_identifier_or_keyword(Tokenizer* tokenizer) {
     char const* p_start = tokenizer->source.data + start;
     usize len = tokenizer->pos - start;
     TokenKind kind = TOKEN_IDENTIFIER;
-    for (usize i = 0; i < sizeof(keywords) / sizeof(ExactToken); i++) {
-        ExactToken pattern = keywords[i];
-        if (!strncmp(p_start, pattern.pattern, len)) {
-            kind = pattern.kind;
+
+    for (usize i = TOKEN_KEYWORD_START; i <= TOKEN_KEYWORD_LAST; i++) {
+        TokenKindDescription desc = token_kind_description(i);
+        if (!strncmp(p_start, desc.exact_chars, len)) {
+            kind = i;
             break;
         }
     }
@@ -149,6 +120,7 @@ bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
         .dst = &stream,
         .error = false,
     };
+    // TODO: don't quit directly when a tokenization failed
     while (tokenize_one(&tokenizer));
     if (tokenizer.error) {
         return false;

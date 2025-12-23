@@ -31,6 +31,7 @@ typedef struct ConstantDef {
     TypeId type;
     ExpressionId value;
     BindingId binding;
+    Range range;
 } ConstantDef;
 
 DECL_ARRAY_BUF(ConstantDef);
@@ -41,6 +42,7 @@ typedef struct VariableDef {
     TypeName type_name;
     TypeId type;
     BindingId binding;
+    Range range;
 } VariableDef;
 
 typedef enum PatternKind {
@@ -64,6 +66,7 @@ typedef struct Function {
     bool explicit_output_type;
     TypeName output_type_name;
     TypeId output_type;
+    Range signature_range;
     ScopeId output_scope;
     ExpressionId output;
     SymbolIndex symbol;

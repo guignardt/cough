@@ -10,6 +10,48 @@ typedef struct Parser {
     AstStorage storage;
 } Parser;
 
+static void unexpected_token(Parser* parser, TokenKind expected) {
+    report_start(parser->reporter, SEVERITY_ERROR, CE_UNEXPECTED_TOKEN);
+    // String found = string_slice(parser->source, )
+    String found;
+    bool eof = parser->pos == parser->tokens.tokens.len;
+    Range found_range;
+    if (eof) {
+        found = STRING_LITERAL("end-of-file");
+    } else {
+        Token token = parser->tokens.tokens.data[parser->pos];
+        found_range = token_range(parser->tokens, token);
+        found = string_slice(parser->source, found_range);
+    }
+    StringBuf message = format(
+        "unexpected token: expected %s, found %.*s",
+        token_kind_description(expected).pretty_description,
+        (int)found.len, found.data
+    );
+    report_message(parser->reporter, message);
+    if (!eof) {
+        report_source_code(parser->reporter, found_range);
+    }
+    report_end(parser->reporter);
+}
+
+static void unclosed_paren(Parser* parser, usize opening) {
+    report_start(parser->reporter, SEVERITY_ERROR, CE_UNCLOSED_PAREN);
+    report_message(parser->reporter, format("expected closing parenthesis"));
+    report_source_code(
+        parser->reporter,
+        token_range(parser->tokens, parser->tokens.tokens.data[parser->pos])
+    );
+    report_message(parser->reporter, format("note: opening parenthesis"));
+    report_source_code(
+        parser->reporter,
+        token_range(parser->tokens, parser->tokens.tokens.data[opening])
+    );
+    report_end(parser->reporter);
+}
+
+// static void parser_simple_error(
+
 static bool parser_match(Parser* parser, TokenKind kind, Token* dst) {
     ArrayBuf(Token) tokens = parser->tokens.tokens;
     if (tokens.len == parser->pos) {
@@ -133,6 +175,7 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_COLON_COLON, NULL)) {
+        unexpected_token(parser, TOKEN_COLON_COLON);
         return ERROR;
     }
     ExpressionId value;
@@ -140,14 +183,17 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_SEMICOLON, NULL)) {
+        unexpected_token(parser, TOKEN_SEMICOLON);
         return ERROR;
     }
+    Range range = { name.range.start, parser->pos };
     *dst = (ConstantDef){
         .name = name,
         .explicitly_typed = false,
         .type = TYPE_INVALID,
         .value = value,
         .binding = BINDING_ID_INVALID,
+        .range = range,
     };
     return SUCCESS;
 }
@@ -159,13 +205,16 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_ARROW, NULL)) {
+        unexpected_token(parser, TOKEN_ARROW);
         return ERROR;
     }
     TypeName output_type;
     if (parse_type_name(parser, &output_type) != SUCCESS) {
         return ERROR;
     }
+    usize signature_end;
     if (!parser_match(parser, TOKEN_DOUBLE_ARROW, NULL)) {
+        unexpected_token(parser, TOKEN_DOUBLE_ARROW);
         return ERROR;
     }
     ExpressionId output;
@@ -176,6 +225,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
     *dst = (Function){
         .input = input,
         .explicit_output_type = true,
+        .signature_range = { start, signature_end },
         .output_type_name = output_type,
         .output_type = TYPE_INVALID,
         .output = output,
@@ -191,6 +241,7 @@ static Result parse_pattern(Parser* parser, Pattern* dst) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_COLON, NULL)) {
+        unexpected_token(parser, TOKEN_COLON);
         return ERROR;
     }
     TypeName type_name;
@@ -198,6 +249,7 @@ static Result parse_pattern(Parser* parser, Pattern* dst) {
         return ERROR;
     }
     usize end = parser->pos;
+    Range range = token_range_range(parser->tokens, (Range){ start, end });
     *dst = (Pattern){
         .kind = PATTERN_VARIABLE,
         .as.variable = {
@@ -206,11 +258,12 @@ static Result parse_pattern(Parser* parser, Pattern* dst) {
             .type_name = type_name,
             .type = TYPE_INVALID,
             .binding = BINDING_ID_INVALID,
+            .range = range,
         },
         .explicitly_typed = true,
         .type_name = type_name,
         .type = TYPE_INVALID,
-        .range = token_range_range(parser->tokens, (Range){ start, end }),
+        .range = range,
     };
     return SUCCESS;
 }
@@ -231,6 +284,7 @@ static Result parse_type_name(Parser* parser, TypeName* dst) {
 static Result parse_identifier(Parser* parser, Identifier* dst) {
     Token identifier;
     if (!parser_match(parser, TOKEN_IDENTIFIER, &identifier)) {
+        unexpected_token(parser, TOKEN_IDENTIFIER);
         return ERROR;
     }
     Range range = token_range(parser->tokens, identifier);
@@ -417,6 +471,7 @@ static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range*
         usize start = parser->pos++;
         parse_expression(parser, dst, NULL);
         if (!parser_match(parser, TOKEN_PAREN_RIGHT, NULL)) {
+            unclosed_paren(parser, start);
             return ERROR;
         }
         *dst_range = token_range_range(parser->tokens, (Range){ start, parser->pos });

@@ -2,6 +2,7 @@
 
 #include "collections/array.h"
 #include "collections/hash_map.h"
+#include "ast/memory.h"
 
 typedef usize TypeId;
 #define TYPE_INVALID ((TypeId)(-1))
@@ -25,6 +26,7 @@ typedef struct Type {
     union {
         FunctionType function;
     } as;
+    String pretty_name;
 } Type;
 
 DECL_ARRAY_BUF(Type);
@@ -39,4 +41,8 @@ void type_registry_free(TypeRegistry* type_registry);
 
 Type get_type(TypeRegistry registry, TypeId type);
 TypeId register_type(TypeRegistry* registry, Type type);
-TypeId get_or_register_function_type(TypeRegistry* registry, FunctionType type);
+TypeId get_or_register_function_type(
+    TypeRegistry* registry,
+    FunctionType type,
+    AstStorage* storage
+);

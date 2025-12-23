@@ -15,7 +15,10 @@ IMPL_ARRAY_BUF(Type)
 
 TypeRegistry type_registry_new(void) {
     ArrayBuf(Type) types = array_buf_new(Type)();
-    array_buf_push(Type)(&types, (Type){ .kind = TYPE_BOOL });
+    array_buf_push(Type)(
+        &types,
+        (Type){ .kind = TYPE_BOOL, .pretty_name = STRING_LITERAL("Bool") }
+    );
     return (TypeRegistry){ ._types = types };
 }
 
@@ -36,10 +39,29 @@ TypeId register_type(TypeRegistry* registry, Type type) {
     return id;
 }
 
-TypeId get_or_register_function_type(TypeRegistry* registry, FunctionType type) {
+TypeId get_or_register_function_type(
+    TypeRegistry* registry,
+    FunctionType type,
+    AstStorage* storage
+) {
     TypeId const* id = hash_map_get(FunctionType, TypeId)(registry->_function_types, type);
     if (id) {
         return *id;
     }
-    return register_type(registry, (Type){ .kind = TYPE_FUNCTION, .as.function = type });
+    Type input = get_type(*registry, type.input);
+    Type output = get_type(*registry, type.output);
+    StringBuf pretty = format(
+        "fn %.*s -> %.*s",
+        (int)input.pretty_name.len, input.pretty_name.data,
+        (int)output.pretty_name.len, output.pretty_name.data
+    );
+    ast_store(storage, pretty.data);
+    return register_type(registry, (Type){
+        .kind = TYPE_FUNCTION,
+        .as.function = type,
+        .pretty_name = {
+            .data = pretty.data,
+            .len = pretty.len,
+        },
+    });
 }

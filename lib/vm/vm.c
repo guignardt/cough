@@ -157,14 +157,24 @@ static ControlFlow run_one(Vm* vm) {
                 );
         FOR_SYSCALLS(RUN_ONE_SYS_CASE)
         default:
-            // FIXME: invalid opcode
-            exit(-1);
+            report_start(vm->reporter, SEVERITY_ERROR, RE_INVALID_INSTRUCTION);
+            report_message(vm->reporter, format(
+                "unknown opcode `0x%"PRIu16"x` at byte 0x%zx",
+                opcode,
+                sizeof(Byteword) * (usize)(vm->ip - vm->bytecode.instructions.data - 1)
+            ));
+            report_end(vm->reporter);
             return FLOW_EXIT;
         }
 
     default:
-        // FIXME: invalid opcode
-        exit(-1);
+        report_start(vm->reporter, SEVERITY_ERROR, RE_INVALID_INSTRUCTION);
+        report_message(vm->reporter, format(
+            "unknown syscall code `0x%"PRIu16"x` at byte 0x%zx",
+            opcode,
+            sizeof(Byteword) * (usize)(vm->ip - vm->bytecode.instructions.data - 1)
+        ));
+        report_end(vm->reporter);
         return FLOW_EXIT;
     }
 }

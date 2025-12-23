@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "generator/generator.h"
 
 typedef struct Generator {
@@ -44,11 +46,13 @@ static void generate_function(Generator gen, Function function) {
 static void generate_pattern_match(Generator gen, Pattern pattern) {
     switch (pattern.kind) {
     case PATTERN_VARIABLE:;
-        BindingId binding = pattern.as.variable.binding;
-        // TODO: sanity check if it's a value binding & variable store
-        usize variable_index = get_binding(gen.bindings, binding)
-            .as.value.store.as.variable.index;
+        BindingId binding_id = pattern.as.variable.binding;
+        Binding binding = get_binding(gen.bindings, binding_id);
+        assert(binding.kind == BINDING_VALUE);
+        assert(binding.as.value.store.kind == VALUE_STORE_VARIABLE);
+        usize variable_index = binding.as.value.store.as.variable.index;
         emit(set)(gen.emitter, variable_index);
+        break;
     }
 }
 
@@ -56,24 +60,24 @@ static void generate_expression(Generator gen, Expression expression) {
     switch (expression.kind) {
     case EXPRESSION_VARIABLE:;
         BindingId binding_id = expression.as.variable.binding;
-        // FIXME: sanity check if it's a value binding?
-        ValueBinding binding = get_binding(gen.bindings, binding_id).as.value;
-        switch (binding.store.kind) {
+        Binding binding = get_binding(gen.bindings, binding_id);
+        assert(binding.kind == BINDING_VALUE);
+        switch (binding.as.value.store.kind) {
         case VALUE_STORE_CONSTANT:;
-            Expression value = gen.expressions[binding.store.as.constant];
+            Expression value = gen.expressions[binding.as.value.store.as.constant];
             switch (value.kind) {
             case EXPRESSION_FUNCTION:
                 emit(loc)(gen.emitter, value.as.function.symbol);
                 break;
             default:
-                // TODO: error handling
-                log_error("unsupported constant type\n");
+                // internal error
+                log_error("unsupported constant expression (internal error)\n");
                 exit(-1);
                 return;
             }
             break;
         case VALUE_STORE_VARIABLE:
-            emit(var)(gen.emitter, binding.store.as.variable.index);
+            emit(var)(gen.emitter, binding.as.value.store.as.variable.index);
             return;
         }
         break;
@@ -84,7 +88,7 @@ static void generate_expression(Generator gen, Expression expression) {
 
     case EXPRESSION_LITERAL_BOOL:
         // all 0s for false, all 1s for true
-        // this ensures `not` works correctly as the VM doesn't use a dedicated
+        // this ensures `not` & friends work correctly as the VM doesn't use a dedicated
         // boolean type, and instead uses `UInt`.
         emit(sca)(
             gen.emitter,
@@ -133,6 +137,12 @@ static void generate_binary_operation(Generator gen, BinaryOperation binary_oper
         generate_expression(gen, lhs);
         generate_expression(gen, rhs);
         emit(and)(gen.emitter);
+        break;
+
+    case OPERATION_XOR:
+        generate_expression(gen, lhs);
+        generate_expression(gen, rhs);
+        emit(xor)(gen.emitter);
         break;
     }
 }
