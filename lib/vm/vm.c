@@ -252,31 +252,78 @@ static ControlFlow op_not(Vm* vm) {
 }
 
 // LHS is lower value, RHS is upper value
-#define IMPL_OP_BINARY(mnemo, inty, outty, op)                        \
+#define IMPL_BINARY_COMPARISON(mnemo, type, op)                 \
     static ControlFlow op_##mnemo(Vm* vm) {                     \
         Word rhs = pop(vm);                                     \
         Word lhs = pop(vm);                                     \
         push(vm, (Word){                                        \
-            .as_##outty = lhs.as_##inty op rhs.as_##inty        \
+            .as_uint = -(lhs.as_##type op rhs.as_##type)        \
         });                                                     \
         return FLOW_CONTINUE;                                   \
     }
 
-IMPL_OP_BINARY(equ, uint, uint, ==);
-IMPL_OP_BINARY(neu, uint, uint, !=);
-IMPL_OP_BINARY(geu, uint, uint, >=);
-IMPL_OP_BINARY(gtu, uint, uint, >);
+IMPL_BINARY_COMPARISON(equ, uint, ==)
+IMPL_BINARY_COMPARISON(neu, uint, !=)
+IMPL_BINARY_COMPARISON(geu, uint, >=)
+IMPL_BINARY_COMPARISON(gtu, uint, >)
+IMPL_BINARY_COMPARISON(leu, uint, <=)
+IMPL_BINARY_COMPARISON(ltu, uint, <)
 
-IMPL_OP_BINARY(lor, uint, uint, |);
-IMPL_OP_BINARY(and, uint, uint, &);
-IMPL_OP_BINARY(xor, uint, uint, ^);
+IMPL_BINARY_COMPARISON(eqi, int, ==)
+IMPL_BINARY_COMPARISON(nei, int, !=)
+IMPL_BINARY_COMPARISON(gei, int, >=)
+IMPL_BINARY_COMPARISON(gti, int, >)
+IMPL_BINARY_COMPARISON(lei, int, <=)
+IMPL_BINARY_COMPARISON(lti, int, <)
 
-static ControlFlow op_adu(Vm* vm) {
-    push(vm, (Word){
-        .as_uint = pop(vm).as_uint + pop(vm).as_uint
-    });
+IMPL_BINARY_COMPARISON(eqf, float, ==)
+IMPL_BINARY_COMPARISON(nef, float, !=)
+IMPL_BINARY_COMPARISON(gef, float, >=)
+IMPL_BINARY_COMPARISON(gtf, float, >)
+IMPL_BINARY_COMPARISON(lef, float, <=)
+IMPL_BINARY_COMPARISON(ltf, float, <)
+
+#define IMPL_BINARY_OPERATION(mnemo, type, op)                  \
+    static ControlFlow op_##mnemo(Vm* vm) {                     \
+        Word rhs = pop(vm);                                     \
+        Word lhs = pop(vm);                                     \
+        push(vm, (Word){                                        \
+            .as_##type = lhs.as_##type op rhs.as_##type         \
+        });                                                     \
+        return FLOW_CONTINUE;                                   \
+    }
+
+IMPL_BINARY_OPERATION(lor, uint, |)
+IMPL_BINARY_OPERATION(and, uint, &)
+IMPL_BINARY_OPERATION(xor, uint, ^)
+
+// FIXME: check for overflow & division by zero
+
+IMPL_BINARY_OPERATION(adu, uint, +)
+IMPL_BINARY_OPERATION(sbu, uint, -)
+IMPL_BINARY_OPERATION(mlu, uint, *)
+IMPL_BINARY_OPERATION(dvu, uint, /)
+
+static ControlFlow op_ngi(Vm* vm) {
+    push(vm, (Word){ .as_int = -pop(vm).as_int });
     return FLOW_CONTINUE;
 }
+
+IMPL_BINARY_OPERATION(adi, int, +)
+IMPL_BINARY_OPERATION(sbi, int, -)
+IMPL_BINARY_OPERATION(mli, int, *)
+IMPL_BINARY_OPERATION(dvi, int, /)
+
+static ControlFlow op_ngf(Vm* vm) {
+    push(vm, (Word){ .as_float = -pop(vm).as_float });
+    return FLOW_CONTINUE;
+}
+
+IMPL_BINARY_OPERATION(adf, float, +)
+IMPL_BINARY_OPERATION(sbf, float, -)
+IMPL_BINARY_OPERATION(mlf, float, *)
+IMPL_BINARY_OPERATION(dvf, float, /)
+
 static ControlFlow sys_nop(Vm* vm) {
     (vm->system)->vtable->nop(vm->system);
     return FLOW_CONTINUE;

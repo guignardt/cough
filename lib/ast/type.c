@@ -15,10 +15,13 @@ IMPL_ARRAY_BUF(Type)
 
 TypeRegistry type_registry_new(void) {
     ArrayBuf(Type) types = array_buf_new(Type)();
-    array_buf_push(Type)(
-        &types,
-        (Type){ .kind = TYPE_BOOL, .pretty_name = STRING_LITERAL("Bool") }
-    );
+    Type scalars[] = {
+        (Type){ .kind = TYPE_BOOL, .pretty_name = STRING_LITERAL("Bool") },
+        (Type){ .kind = TYPE_UINT, .pretty_name = STRING_LITERAL("UInt") },
+        (Type){ .kind = TYPE_INT, .pretty_name = STRING_LITERAL("Int") },
+        (Type){ .kind = TYPE_FLOAT, .pretty_name = STRING_LITERAL("Float") },
+    };
+    array_buf_extend(Type)(&types, scalars, 2);
     return (TypeRegistry){ ._types = types };
 }
 

@@ -81,6 +81,10 @@ typedef struct VariableRef {
 
 typedef enum UnaryOperator {
     OPERATION_NOT,
+
+    OPERATION_NEG,
+    OPERATION_NEG_INT = OPERATION_NEG,
+    OPERATION_NEG_FLOAT,
 } UnaryOperator;
 
 typedef struct UnaryOperation {
@@ -90,9 +94,30 @@ typedef struct UnaryOperation {
 
 typedef enum BinaryOperator {
     OPERATION_FUNCTION_CALL,
+
     OPERATION_OR,
     OPERATION_AND,
     OPERATION_XOR,
+
+    OPERATION_ADD,
+    OPERATION_SUB,
+    OPERATION_MUL,
+    OPERATION_DIV,
+
+    OPERATION_ADD_UINT = OPERATION_ADD,
+    OPERATION_SUB_UINT = OPERATION_SUB,
+    OPERATION_MUL_UINT = OPERATION_MUL,
+    OPERATION_DIV_UINT = OPERATION_DIV,
+
+    OPERATION_ADD_INT,
+    OPERATION_SUB_INT,
+    OPERATION_MUL_INT,
+    OPERATION_DIV_INT,
+
+    OPERATION_ADD_FLOAT,
+    OPERATION_SUB_FLOAT,
+    OPERATION_MUL_FLOAT,
+    OPERATION_DIV_FLOAT,
 } BinaryOperator;
 
 typedef struct BinaryOperation {

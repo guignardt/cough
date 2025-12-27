@@ -25,12 +25,6 @@ typedef enum Opcode {
     /// @param syscall The code of the syscall (16-bit immediate).
     OP_SYS,
 
-    // /// @brief `cas` -- static call.
-    // ///
-    // /// @param func the location of the first instruction of the function (64-bit immediate).
-    // /// Is usually a `frm` instruction.
-    // OP_CAS,
-
     /// @brief `cal` -- dynamic call.
     OP_CAL,
 
@@ -98,6 +92,13 @@ typedef enum Opcode {
     /// greater than the second one, and `0` otherwise.
     OP_GTU,
 
+    // TODO: docs
+
+    OP_LEU, OP_LTU,
+
+    OP_EQI, OP_NEI, OP_GEI, OP_GTI, OP_LEI, OP_LTI,
+    OP_EQF, OP_NEF, OP_GEF, OP_GTF, OP_LEF, OP_LTF,
+
     /// @brief `not` -- compute the bitwise not of a value.
     OP_NOT,
 
@@ -113,6 +114,59 @@ typedef enum Opcode {
     /// @brief `adu` -- add two `UInt`s together. Pops the two values at the
     /// top of the stack and pushes their sum.
     OP_ADU,
+
+    /// @brief `sbu` -- subtract one `UInt` from another. Pops the two values
+    /// at the top of the stack and pushes the bottom value minus the top
+    /// value.
+    OP_SBU,
+
+    /// @brief `mlu` -- multiply two `UInt`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
+    OP_MLU,
+
+    /// @brief `dvu` -- divide one `UInt` by another. Pops the two values the
+    /// top of the stack and pushes the bottom value divided by the top value.
+    OP_DVU,
+
+    /// @brief `ngi` -- compute the additive inverse of an `Int`.
+    OP_NGI,
+
+    /// @brief `adi` -- add two `Int`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
+    OP_ADI,
+
+    /// @brief `sbi` -- subtract one `Int` from another. Pops the two values
+    /// at the top of the stack and pushes the bottom value minus the top
+    /// value.
+    OP_SBI,
+
+    /// @brief `mli` -- multiply two `Int`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
+    OP_MLI,
+
+    /// @brief `dvi` -- divide one `Int` by another. Pops the two values the
+    /// top of the stack and pushes the bottom value divided by the top value.
+    OP_DVI,
+
+    /// @brief `ngf` -- compute the additive inverse of a `Float`.
+    OP_NGF,
+
+    /// @brief `adf` -- add two `Float`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
+    OP_ADF,
+
+    /// @brief `sbf` -- subtract one `Float` from another. Pops the two values
+    /// at the top of the stack and pushes the bottom value minus the top
+    /// value.
+    OP_SBF,
+
+    /// @brief `mlf` -- multiply two `Float`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
+    OP_MLF,
+
+    /// @brief `dvf` -- divide one `Float` by another. Pops the two values the
+    /// top of the stack and pushes the bottom value divided by the top value.
+    OP_DVF,
 
     OPCODES_LEN,
 } Opcode;
@@ -173,25 +227,56 @@ void bytecode_write_location_at(Byteword** ip, usize symbol);
 
 #define FOR_OPERATIONS(proc)    \
     proc(OP_NOP, nop)           \
+                                \
     proc(OP_CAL, cal)           \
     proc(OP_RES, res, imb)      \
     proc(OP_RET, ret)           \
+                                \
     proc(OP_SCA, sca, imw)      \
     proc(OP_LOC, loc, loc)      \
     proc(OP_VAR, var, var)      \
     proc(OP_SET, set, var)      \
     proc(OP_POP, pop)           \
+                                \
     proc(OP_JMP, jmp, loc)      \
     proc(OP_JNZ, jnz, loc)      \
+                                \
     proc(OP_EQU, equ)           \
     proc(OP_NEU, neu)           \
     proc(OP_GEU, geu)           \
     proc(OP_GTU, gtu)           \
+                                \
+    proc(OP_EQI, eqi)           \
+    proc(OP_NEI, nei)           \
+    proc(OP_GEI, gei)           \
+    proc(OP_GTI, gti)           \
+                                \
+    proc(OP_EQF, eqf)           \
+    proc(OP_NEF, nef)           \
+    proc(OP_GEF, gef)           \
+    proc(OP_GTF, gtf)           \
+                                \
     proc(OP_NOT, not)           \
     proc(OP_LOR, lor)           \
     proc(OP_AND, and)           \
     proc(OP_XOR, xor)           \
+                                \
     proc(OP_ADU, adu)           \
+    proc(OP_SBU, sbu)           \
+    proc(OP_MLU, mlu)           \
+    proc(OP_DVU, dvu)           \
+                                \
+    proc(OP_NGI, ngi)           \
+    proc(OP_ADI, adi)           \
+    proc(OP_SBI, sbi)           \
+    proc(OP_MLI, mli)           \
+    proc(OP_DVI, dvi)           \
+                                \
+    proc(OP_NGF, ngf)           \
+    proc(OP_ADF, adf)           \
+    proc(OP_SBF, sbf)           \
+    proc(OP_MLF, mlf)           \
+    proc(OP_DVF, dvf)           \
 
 #define FOR_SYSCALLS(proc)      \
     proc(SYS_NOP, nop)          \

@@ -145,6 +145,8 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression(Analyzer* analyzer, Expression* expression);
 static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range, TypeId* dst);
 static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range, TypeId* dst);
+static TypeId type_bitwise_binary( Analyzer* analyzer, Expression* lhs, Expression* rhs);
+static TypeId type_arithmetic_binary( Analyzer* analyzer, Expression* lhs, Expression* rhs, int* index);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
@@ -413,6 +415,25 @@ static void analyze_unary_operation(
         }
         *dst = TYPE_BOOL;
         break;
+
+    // only `OPERATION_NEG` is actually produced by the parser
+    case OPERATION_NEG: // = `OPERATION_NEG_INT`
+    case OPERATION_NEG_FLOAT:
+        switch (operand->type) {
+        case TYPE_INT:
+            unary_operation->operator = OPERATION_NEG_INT;
+            *dst = TYPE_INT;
+            break;
+        case TYPE_FLOAT:
+            unary_operation->operator = OPERATION_NEG_FLOAT;
+            *dst = TYPE_FLOAT;
+            break;
+        case TYPE_INVALID: break;
+        default:
+            // TODO: mismatched type for ambiguous operator
+            exit(-1);
+        }
+        break;
     }
 }
 
@@ -427,6 +448,7 @@ static void analyze_binary_operation(
     analyze_expression(analyzer, lhs);
     analyze_expression(analyzer, rhs);
 
+    int index;
     switch (binary_operation->operator) {
     case OPERATION_FUNCTION_CALL:;
         if (lhs->type == TYPE_INVALID) {
@@ -453,31 +475,108 @@ static void analyze_binary_operation(
     case OPERATION_OR:
     case OPERATION_AND:
     case OPERATION_XOR:;
-        if (lhs->type != TYPE_BOOL || rhs->type != TYPE_BOOL) {
-            if (lhs->type != TYPE_INVALID) {
-                mismatched_types(
-                    analyzer,
-                    TYPE_BOOL,
-                    false,
-                    (Range){0},
-                    lhs->type,
-                    lhs->range
-                );
-            }
-            if (rhs->type != TYPE_INVALID) {
-                mismatched_types(
-                    analyzer,
-                    TYPE_BOOL,
-                    false,
-                    (Range){0},
-                    rhs->type,
-                    rhs->range
-                );
-            }
-        }
-        *dst = TYPE_BOOL;
+        *dst = type_bitwise_binary(analyzer, lhs, rhs);
+        break;
+
+    // only `OPERATION_ADD` ist actually produced by the parser
+    case OPERATION_ADD: // = `OPERATION_ADD_UINT`
+    case OPERATION_ADD_INT:
+    case OPERATION_ADD_FLOAT:;
+        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        binary_operation->operator = OPERATION_ADD + index;
+        break;
+
+    // only `OPERATION_SUB` ist actually produced by the parser
+    case OPERATION_SUB: // = `OPERATION_ADD_UINT`
+    case OPERATION_SUB_INT:
+    case OPERATION_SUB_FLOAT:;
+        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        binary_operation->operator = OPERATION_SUB + index;
+        break;
+
+    // only `OPERATION_MUL` ist actually produced by the parser
+    case OPERATION_MUL: // = `OPERATION_ADD_UINT`
+    case OPERATION_MUL_INT:
+    case OPERATION_MUL_FLOAT:;
+        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        binary_operation->operator = OPERATION_MUL + index;
+        break;
+
+    // only `OPERATION_DIV` ist actually produced by the parser
+    case OPERATION_DIV: // = `OPERATION_ADD_UINT`
+    case OPERATION_DIV_INT:
+    case OPERATION_DIV_FLOAT:;
+        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        binary_operation->operator = OPERATION_DIV + index;
         break;
     }
+}
+
+static TypeId type_bitwise_binary(
+    Analyzer* analyzer,
+    Expression* lhs,
+    Expression* rhs
+) {
+    if (lhs->type != rhs->type) {
+        mismatched_types(
+            analyzer,
+            lhs->type,
+            true,
+            lhs->range,
+            rhs->type,
+            rhs->range
+        );
+        return TYPE_INVALID;
+    }
+    if (lhs->type != TYPE_BOOL && lhs->type != TYPE_UINT && lhs->type != TYPE_INT) {
+        if (lhs->type != TYPE_INVALID) {
+            mismatched_types(
+                analyzer,
+                TYPE_BOOL,
+                false,
+                (Range){0},
+                lhs->type,
+                lhs->range
+            );
+        }
+        return TYPE_INVALID;
+    }
+    return lhs->type;
+}
+
+static TypeId type_arithmetic_binary(
+    Analyzer* analyzer,
+    Expression* lhs,
+    Expression* rhs,
+    int* index  // sets to 0 for uint, 1 for int, 2 for float
+) {
+    if (lhs->type != rhs->type) {
+        mismatched_types(
+            analyzer,
+            lhs->type,
+            true,
+            lhs->range,
+            rhs->type,
+            rhs->range
+        );
+        return TYPE_INVALID;
+    }
+    if (lhs->type != TYPE_UINT && lhs->type != TYPE_INT && lhs->type != TYPE_FLOAT) {
+        if (lhs->type != TYPE_INVALID) {
+            mismatched_types(
+                analyzer,
+                TYPE_BOOL,
+                false,
+                (Range){0},
+                lhs->type,
+                lhs->range
+            );
+        }
+        return TYPE_INVALID;
+    }
+    int indices[] = { [TYPE_UINT] = 0, [TYPE_INT] = 1, [TYPE_FLOAT] = 2 };
+    *index = indices[lhs->type];
+    return lhs->type;
 }
 
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref) {

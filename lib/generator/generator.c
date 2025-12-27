@@ -6,7 +6,6 @@ typedef struct Generator {
     Emitter* emitter;
     Expression const* expressions;
     BindingRegistry bindings;
-
 } Generator;
 
 static void generate_function(Generator gen, Function function);
@@ -113,36 +112,78 @@ static void generate_unary_operation(Generator gen, UnaryOperation unary_operati
     case OPERATION_NOT:
         emit(not)(gen.emitter);
         break;
+
+    case OPERATION_NEG:
+        emit(ngi)(gen.emitter);
+        break;
     }
 }
 
 static void generate_binary_operation(Generator gen, BinaryOperation binary_operation) {
     Expression lhs = gen.expressions[binary_operation.operand_left];
     Expression rhs = gen.expressions[binary_operation.operand_right];
-    switch (binary_operation.operator) {
-    case OPERATION_FUNCTION_CALL:
+
+    if (binary_operation.operator == OPERATION_FUNCTION_CALL) {
         // function currently only consist of a location
         generate_expression(gen, rhs);
         generate_expression(gen, lhs);
+    } else {
+        generate_expression(gen, lhs);
+        generate_expression(gen, rhs);
+    }
+
+    switch (binary_operation.operator) {
+    case OPERATION_FUNCTION_CALL:
         emit(cal)(gen.emitter);
         break;
 
     case OPERATION_OR:
-        generate_expression(gen, lhs);
-        generate_expression(gen, rhs);
         emit(lor)(gen.emitter);
         break;
-
     case OPERATION_AND:
-        generate_expression(gen, lhs);
-        generate_expression(gen, rhs);
         emit(and)(gen.emitter);
         break;
-
     case OPERATION_XOR:
-        generate_expression(gen, lhs);
-        generate_expression(gen, rhs);
         emit(xor)(gen.emitter);
+        break;
+
+    case OPERATION_ADD_UINT:
+        emit(adu)(gen.emitter);
+        break;
+    case OPERATION_SUB_UINT:
+        emit(sbu)(gen.emitter);
+        break;
+    case OPERATION_MUL_UINT:
+        emit(mlu)(gen.emitter);
+        break;
+    case OPERATION_DIV_UINT:
+        emit(dvu)(gen.emitter);
+        break;
+
+    case OPERATION_ADD_INT:
+        emit(adi)(gen.emitter);
+        break;
+    case OPERATION_SUB_INT:
+        emit(sbi)(gen.emitter);
+        break;
+    case OPERATION_MUL_INT:
+        emit(mli)(gen.emitter);
+        break;
+    case OPERATION_DIV_INT:
+        emit(dvi)(gen.emitter);
+        break;
+
+    case OPERATION_ADD_FLOAT:
+        emit(adf)(gen.emitter);
+        break;
+    case OPERATION_SUB_FLOAT:
+        emit(sbf)(gen.emitter);
+        break;
+    case OPERATION_MUL_FLOAT:
+        emit(mlf)(gen.emitter);
+        break;
+    case OPERATION_DIV_FLOAT:
+        emit(dvf)(gen.emitter);
         break;
     }
 }

@@ -18,6 +18,9 @@ DECL_HASH_MAP(FunctionType, TypeId)
 
 typedef enum TypeKind {
     TYPE_BOOL,
+    TYPE_UINT,
+    TYPE_INT,
+    TYPE_FLOAT,
     TYPE_FUNCTION,
 } TypeKind;
 
