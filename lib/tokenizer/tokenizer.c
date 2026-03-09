@@ -3,6 +3,8 @@
 
 #include "tokenizer/tokenizer.h"
 
+IMPL_HASH_MAP(usize, TokenRanges);
+
 typedef struct Tokenizer {
     String source;
     usize pos;
@@ -71,14 +73,101 @@ static void tokenize_identifier_or_keyword(Tokenizer* tokenizer) {
         }
     }
     if (kind == TOKEN_IDENTIFIER) {
-        hash_map_insert(usize, usize)(
-            &tokenizer->dst->_end_pos,
+        TokenRanges ranges = {
+            .end_pos = tokenizer->pos
+        };
+        hash_map_insert(usize, TokenRanges)(
+            &tokenizer->dst->_token_ranges,
             start,
-            tokenizer->pos
+            ranges
         );
     }
     Token token = { .kind = kind, .pos = start };
     array_buf_push(Token)(&tokenizer->dst->tokens, token);
+}
+
+static bool tokenize_digits(Tokenizer* tokenizer) {
+    bool parsed = false;
+    while (isdigit(tokenizer->source.data[tokenizer->pos])) {
+        tokenizer->pos++;
+        parsed = true;
+    }
+    return parsed;
+}
+
+static void push_integer_token(Tokenizer* tokenizer, usize start, usize digits_start, i8 sign) {
+    TokenKind kind = (sign != 0) ? TOKEN_SIGNED_INTEGER : TOKEN_UNSIGNED_INTEGER;
+    Token token = { .kind = kind, .pos = start };
+    array_buf_push(Token)(&tokenizer->dst->tokens, token);
+    TokenRanges ranges = {
+        .end_pos = tokenizer->pos,
+        .subranges = { (Range){ digits_start, tokenizer->pos } },
+    };
+    hash_map_insert(usize, TokenRanges)(
+        &tokenizer->dst->_token_ranges,
+        token.pos,
+        ranges
+    );
+}
+
+static i8 number_sign(Tokenizer* tokenizer, usize* number_start) {
+    *number_start = tokenizer->pos;
+    usize n_tokens = tokenizer->dst->tokens.len;
+    if (n_tokens == 0) {
+        return 0;
+    }
+    Token last = tokenizer->dst->tokens.data[n_tokens - 1];
+    if (last.pos + 1 != tokenizer->pos) {
+        return 0;
+    }
+    i8 sign;
+    switch (last.kind) {
+    case TOKEN_PLUS: sign = 1; break;
+    case TOKEN_MINUS: sign = -1; break;
+    default: return 0;
+    }
+    array_buf_pop(Token)(&tokenizer->dst->tokens);
+    *number_start = last.pos;
+    return sign;
+}
+
+static void tokenize_number(Tokenizer* tokenizer) {
+    usize start;
+    i8 sign = number_sign(tokenizer, &start);
+
+    usize integer_start = tokenizer->pos;
+    // We check in `tokenize_one` that we start with a digit.
+    tokenize_digits(tokenizer);
+
+    if (tokenizer->source.data[tokenizer->pos] != '.') {
+        push_integer_token(tokenizer, start, integer_start, sign);
+        return;
+    }
+
+    Tokenizer tokenizer2 = *tokenizer;
+    usize integer_end = tokenizer2.pos;
+    tokenizer2.pos++;
+    usize fractional_start = tokenizer2.pos;
+    if (!tokenize_digits(&tokenizer2)) {
+        push_integer_token(tokenizer, start, integer_start, sign);
+        return;
+    }
+
+    *tokenizer = tokenizer2;
+    Token token = { .kind = TOKEN_FLOATING_POINT, .pos = start };
+    array_buf_push(Token)(&tokenizer->dst->tokens, token);
+    TokenRanges ranges = {
+        .end_pos = tokenizer->pos,
+        .subranges = {
+            (Range){ integer_start, integer_end },
+            (Range){ fractional_start, tokenizer->pos },
+        },
+    };
+    hash_map_insert(usize, TokenRanges)(
+        &tokenizer->dst->_token_ranges,
+        token.pos,
+        ranges
+    );
 }
 
 static void skip_whitespace(Tokenizer* p_tokenizer) {
@@ -99,7 +188,9 @@ bool tokenize_one(Tokenizer* tokenizer) {
         return false;
     }
     char c = tokenizer->source.data[tokenizer->pos];
-    if (ispunct(c) && c != '_') {
+    if (isdigit(c)) {
+        tokenize_number(tokenizer);
+    } else if (ispunct(c) && c != '_') {
         tokenize_punctuation(tokenizer);
     } else if (isalpha(c) || c == '_') {
         tokenize_identifier_or_keyword(tokenizer);
@@ -111,7 +202,7 @@ bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
     TokenStream stream = {
         .source = source,
         .tokens = array_buf_new(Token)(),
-        ._end_pos = hash_map_new(usize, usize)(),
+        ._token_ranges = hash_map_new(usize, TokenRanges)(),
     };
     Tokenizer tokenizer = {
         .source = source,

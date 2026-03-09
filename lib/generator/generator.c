@@ -113,7 +113,11 @@ static void generate_unary_operation(Generator gen, UnaryOperation unary_operati
         emit(not)(gen.emitter);
         break;
 
-    case OPERATION_NEG:
+    case OPERATION_NEG_INT:
+        emit(ngi)(gen.emitter);
+        break;
+
+    case OPERATION_NEG_FLOAT:
         emit(ngi)(gen.emitter);
         break;
     }

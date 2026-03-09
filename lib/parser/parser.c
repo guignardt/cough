@@ -12,7 +12,6 @@ typedef struct Parser {
 
 static void unexpected_token(Parser* parser, TokenKind expected) {
     report_start(parser->reporter, SEVERITY_ERROR, CE_UNEXPECTED_TOKEN);
-    // String found = string_slice(parser->source, )
     String found;
     bool eof = parser->pos == parser->tokens.tokens.len;
     Range found_range;

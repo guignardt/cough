@@ -20,7 +20,17 @@ typedef enum TokenKind {
     TOKEN_AMPERSAND,
     TOKEN_HAT,
 
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_ASTERISK,
+    TOKEN_SLASH,
+    TOKEN_PERCENT,
+
     TOKEN_IDENTIFIER,
+
+    TOKEN_UNSIGNED_INTEGER,
+    TOKEN_SIGNED_INTEGER,
+    TOKEN_FLOATING_POINT,
 
     TOKEN_LET,
     TOKEN_FN,
@@ -29,7 +39,7 @@ typedef enum TokenKind {
 } TokenKind;
 
 #define TOKEN_PUNCT_START   TOKEN_PAREN_LEFT
-#define TOKEN_PUNCT_LAST    TOKEN_HAT
+#define TOKEN_PUNCT_LAST    TOKEN_PERCENT
 #define TOKEN_KEYWORD_START TOKEN_LET
 #define TOKEN_KEYWORD_LAST  TOKEN_TRUE
 
@@ -48,13 +58,20 @@ typedef struct TokenKindDescription {
 
 TokenKindDescription token_kind_description(TokenKind token_kind);
 
+typedef struct TokenRanges {
+    usize end_pos;
+    Range subranges[2];
+} TokenRanges;
+DECL_HASH_MAP(usize, TokenRanges);
+
 typedef struct TokenStream {
     String source;
     ArrayBuf(Token) tokens;
-    HashMap(usize, usize) _end_pos;
+    HashMap(usize, TokenRanges) _token_ranges;
 } TokenStream;
 
 void token_stream_free(TokenStream* token_stream);
 
+bool token_ranges(TokenStream stream, Token token, TokenRanges* dst);
 Range token_range(TokenStream stream, Token token);
 Range token_range_range(TokenStream stream, Range range);

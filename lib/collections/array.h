@@ -129,7 +129,7 @@ DECL_ARRAY_BUF(char);
     array_buf_pop(T)(                                                           \
         ArrayBuf(T)* array                                                      \
     ) {                                                                         \
-        return array->data[--array->len];                                       \
+        return array->data[--(array->len)];                                     \
     }
 
 #define IMPL_ARRAY_BUF(T)                                                       \

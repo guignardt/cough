@@ -424,5 +424,3 @@ typedef enum HashMapSlotOccupancy {
     IMPL_HASH_MAP_ENTRY_GET(KEY, VALUE)                                         \
     IMPL_HASH_MAP_ENTRY_INSERT(KEY, VALUE)                                      \
     IMPL_HASH_MAP_ENTRY_REMOVE(KEY, VALUE)                                      \
-
-DECL_HASH_MAP(usize, usize)
