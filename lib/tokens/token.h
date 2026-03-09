@@ -28,9 +28,7 @@ typedef enum TokenKind {
 
     TOKEN_IDENTIFIER,
 
-    TOKEN_UNSIGNED_INTEGER,
-    TOKEN_SIGNED_INTEGER,
-    TOKEN_FLOATING_POINT,
+    TOKEN_NUMBER,
 
     TOKEN_LET,
     TOKEN_FN,
@@ -58,20 +56,16 @@ typedef struct TokenKindDescription {
 
 TokenKindDescription token_kind_description(TokenKind token_kind);
 
-typedef struct TokenRanges {
-    usize end_pos;
-    Range subranges[2];
-} TokenRanges;
-DECL_HASH_MAP(usize, TokenRanges);
+DECL_HASH_MAP(usize, usize);
 
 typedef struct TokenStream {
     String source;
     ArrayBuf(Token) tokens;
-    HashMap(usize, TokenRanges) _token_ranges;
+    HashMap(usize, usize) _end_pos;
 } TokenStream;
 
 void token_stream_free(TokenStream* token_stream);
 
-bool token_ranges(TokenStream stream, Token token, TokenRanges* dst);
+// bool token_ranges(TokenStream stream, Token token, TokenRanges* dst);
 Range token_range(TokenStream stream, Token token);
 Range token_range_range(TokenStream stream, Range range);

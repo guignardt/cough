@@ -6,7 +6,7 @@ IMPL_ARRAY_BUF(Token)
 
 void token_stream_free(TokenStream* token_stream) {
     array_buf_free(Token)(&token_stream->tokens);
-    hash_map_free(usize, TokenRanges)(&token_stream->_token_ranges);
+    hash_map_free(usize, usize)(&token_stream->_end_pos);
 }
 
 static TokenKindDescription token_kind_table[] = {
@@ -32,9 +32,7 @@ static TokenKindDescription token_kind_table[] = {
     [TOKEN_PERCENT] =           {   1,  "%",        "`%`"                       },
 
     [TOKEN_IDENTIFIER] =        {   -1, NULL,       "<identifier>"              },
-    [TOKEN_UNSIGNED_INTEGER] =  {   -1, NULL,       "<unsigned integer>"        },
-    [TOKEN_SIGNED_INTEGER] =    {   -1, NULL,       "<signed integer>"          },
-    [TOKEN_FLOATING_POINT] =    {   -1, NULL,       "<floating-point number>"   },
+    [TOKEN_NUMBER] =            {   -1, NULL,       "<number>"                  },
 
     [TOKEN_LET] =               {   3,  "let",      "`let`"                     },
     [TOKEN_FN] =                {   2,  "fn",       "`fn`"                      },
@@ -46,24 +44,15 @@ TokenKindDescription token_kind_description(TokenKind token_kind) {
     return token_kind_table[token_kind];
 }
 
-bool token_ranges(TokenStream stream, Token token, TokenRanges* dst) {
-    TokenRanges const* ptr = hash_map_get(usize, TokenRanges)(stream._token_ranges, token.pos);
-    if (ptr == NULL) {
-        return false;
-    }
-    *dst = *ptr;
-    return true;
-}
-
 Range token_range(TokenStream stream, Token token) {
     usize end_pos;
     TokenKindDescription desc = token_kind_description(token.kind);
     if (desc.len != -1) {
-        end_pos = desc.len;
+        end_pos = token.pos + desc.len;
     } else {
-        TokenRanges ranges;
-        assert(token_ranges(stream, token, &ranges) && "missing token range information");
-        end_pos = ranges.end_pos;
+        usize const* end_pos_ptr = hash_map_get(usize, usize)(stream._end_pos, token.pos);
+        assert(end_pos_ptr && "missing token range information (this is a bug; please report)");
+        end_pos = *end_pos_ptr;
     }
     return (Range){ token.pos, end_pos };
 }

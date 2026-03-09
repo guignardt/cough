@@ -3,7 +3,7 @@
 
 #include "tokenizer/tokenizer.h"
 
-IMPL_HASH_MAP(usize, TokenRanges);
+IMPL_HASH_MAP(usize, usize);
 
 typedef struct Tokenizer {
     String source;
@@ -73,13 +73,10 @@ static void tokenize_identifier_or_keyword(Tokenizer* tokenizer) {
         }
     }
     if (kind == TOKEN_IDENTIFIER) {
-        TokenRanges ranges = {
-            .end_pos = tokenizer->pos
-        };
-        hash_map_insert(usize, TokenRanges)(
-            &tokenizer->dst->_token_ranges,
+        hash_map_insert(usize, usize)(
+            &tokenizer->dst->_end_pos,
             start,
-            ranges
+            tokenizer->pos
         );
     }
     Token token = { .kind = kind, .pos = start };
@@ -95,78 +92,48 @@ static bool tokenize_digits(Tokenizer* tokenizer) {
     return parsed;
 }
 
-static void push_integer_token(Tokenizer* tokenizer, usize start, usize digits_start, i8 sign) {
-    TokenKind kind = (sign != 0) ? TOKEN_SIGNED_INTEGER : TOKEN_UNSIGNED_INTEGER;
-    Token token = { .kind = kind, .pos = start };
-    array_buf_push(Token)(&tokenizer->dst->tokens, token);
-    TokenRanges ranges = {
-        .end_pos = tokenizer->pos,
-        .subranges = { (Range){ digits_start, tokenizer->pos } },
-    };
-    hash_map_insert(usize, TokenRanges)(
-        &tokenizer->dst->_token_ranges,
-        token.pos,
-        ranges
-    );
-}
-
-static i8 number_sign(Tokenizer* tokenizer, usize* number_start) {
+static void remove_number_sign(Tokenizer* tokenizer, usize* number_start) {
     *number_start = tokenizer->pos;
     usize n_tokens = tokenizer->dst->tokens.len;
     if (n_tokens == 0) {
-        return 0;
+        return;
     }
     Token last = tokenizer->dst->tokens.data[n_tokens - 1];
     if (last.pos + 1 != tokenizer->pos) {
-        return 0;
+        return;
     }
-    i8 sign;
-    switch (last.kind) {
-    case TOKEN_PLUS: sign = 1; break;
-    case TOKEN_MINUS: sign = -1; break;
-    default: return 0;
+    if (last.kind != TOKEN_PLUS && last.kind != TOKEN_MINUS) {
+        return;
     }
     array_buf_pop(Token)(&tokenizer->dst->tokens);
     *number_start = last.pos;
-    return sign;
 }
 
 static void tokenize_number(Tokenizer* tokenizer) {
+    // tokenize sign
     usize start;
-    i8 sign = number_sign(tokenizer, &start);
+    remove_number_sign(tokenizer, &start);
 
-    usize integer_start = tokenizer->pos;
-    // We check in `tokenize_one` that we start with a digit.
+    // tokenize integer part
+    // this is guaranteed to succeed: this function gets called with a numeric head character
     tokenize_digits(tokenizer);
 
-    if (tokenizer->source.data[tokenizer->pos] != '.') {
-        push_integer_token(tokenizer, start, integer_start, sign);
-        return;
-    }
-
+    // tokenize optional fractional part
     Tokenizer tokenizer2 = *tokenizer;
-    usize integer_end = tokenizer2.pos;
-    tokenizer2.pos++;
-    usize fractional_start = tokenizer2.pos;
-    if (!tokenize_digits(&tokenizer2)) {
-        push_integer_token(tokenizer, start, integer_start, sign);
-        return;
+    if (tokenizer2.source.data[tokenizer2.pos] == '.') {
+        tokenizer2.pos++;
+    }
+    if (tokenize_digits(&tokenizer2)) {
+        *tokenizer = tokenizer2;
     }
 
-    *tokenizer = tokenizer2;
-    Token token = { .kind = TOKEN_FLOATING_POINT, .pos = start };
+    // push token & sparse info
+    Token token = { .kind = TOKEN_NUMBER, .pos = start };
     array_buf_push(Token)(&tokenizer->dst->tokens, token);
-    TokenRanges ranges = {
-        .end_pos = tokenizer->pos,
-        .subranges = {
-            (Range){ integer_start, integer_end },
-            (Range){ fractional_start, tokenizer->pos },
-        },
-    };
-    hash_map_insert(usize, TokenRanges)(
-        &tokenizer->dst->_token_ranges,
+    hash_map_insert(usize, usize)(
+        &tokenizer->dst->_end_pos,
         token.pos,
-        ranges
+        tokenizer->pos
     );
 }
 
@@ -202,7 +169,7 @@ bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
     TokenStream stream = {
         .source = source,
         .tokens = array_buf_new(Token)(),
-        ._token_ranges = hash_map_new(usize, TokenRanges)(),
+        ._end_pos = hash_map_new(usize, usize)(),
     };
     Tokenizer tokenizer = {
         .source = source,
