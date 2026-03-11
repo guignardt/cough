@@ -25,7 +25,7 @@ typedef struct TestReporter {
 } TestReporter;
 
 TestReporter test_reporter_new(void);
-void test_reporter_free(TestReporter reporter);
+void test_reporter_free(TestReporter* reporter);
 
 typedef struct CrashingReporter {
     Reporter base;

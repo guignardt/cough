@@ -9,7 +9,7 @@ typedef enum Result {
     /// errors have been contained and that the current stage can continue like
     /// no errors have occured. However, if an error has occured (which is
     /// recorded by the reporter), the next stage may not be executed.
-    SUCCESS = 0,
+    OK = 0,
 
     /// @brief Indicates that the callee has failed, and that the caller may not
     /// continue executing right away.

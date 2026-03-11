@@ -46,15 +46,15 @@ static void undefined_symbol(Assembler* assembler);
 
 Result assemble(String assembly, Reporter* reporter, Bytecode* dst) {
     Assembler assembler = assembler_new(assembly, reporter);
-    if (assemble_all(&assembler) != SUCCESS) {
+    if (assemble_all(&assembler) != OK) {
         assembler_free(&assembler);
         return ERROR;
     }
-    if (assembler_finish(&assembler, dst) != SUCCESS) {
+    if (assembler_finish(&assembler, dst) != OK) {
         assembler_free(&assembler);
         return ERROR;
     }
-    return SUCCESS;
+    return OK;
 }
 
 static HashMap(Mnemonic, u8) mnemonic_table(const Mnemonic* mnemonics, usize len) {
@@ -114,7 +114,7 @@ static Result assemble_all(Assembler* assembler) {
             assembler->position++;
             if (
                 parse_symbol_name(assembler, &symbol_index, &symbol_name_range)
-                != SUCCESS
+                != OK
             ) {
                 return ERROR;
             }
@@ -122,14 +122,14 @@ static Result assemble_all(Assembler* assembler) {
                 duplicate_symbol(assembler, symbol_name_range);
                 return ERROR;
             }
-        } else if (assemble_one(assembler) != SUCCESS) {
+        } else if (assemble_one(assembler) != OK) {
             return ERROR;
         }
 
         new_thing = false;
     }
 
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_instruction(
@@ -163,7 +163,7 @@ static Result parse_instruction(
         return ERROR;
     }
     *dst = *p_code;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_number(
@@ -213,7 +213,7 @@ static Result parse_number(
         return ERROR;
     }
     *dst = val;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_single_char(Assembler* assembler, char c, Range* range) {
@@ -226,29 +226,29 @@ static Result parse_single_char(Assembler* assembler, char c, Range* range) {
         return ERROR;
     }
     assembler->position++;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_imb(Assembler* assembler, EmitArg(imb)* dst) {
     i64 number;
     Range range;
-    if (parse_number(assembler, 0, UINT16_MAX, &number, &range) != SUCCESS) {
+    if (parse_number(assembler, 0, UINT16_MAX, &number, &range) != OK) {
         invalid_arg(assembler, range);
         return ERROR;
     }
     *dst = number;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_imw(Assembler* assembler, EmitArg(imw)* dst) {
     i64 number;
     Range range;
-    if (parse_number(assembler, INT64_MIN, INT64_MAX, &number, &range) != SUCCESS) {
+    if (parse_number(assembler, INT64_MIN, INT64_MAX, &number, &range) != OK) {
         invalid_arg(assembler, range);
         return ERROR;
     }
     dst->as_int = number;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_var(Assembler* assembler, EmitArg(var)* dst) {
@@ -268,26 +268,26 @@ static Result parse_var(Assembler* assembler, EmitArg(var)* dst) {
     }
     assembler->position++;
     EmitArg(imb) index;
-    if (parse_imb(assembler, &index) != SUCCESS) {
+    if (parse_imb(assembler, &index) != OK) {
         return ERROR;
     }
     *dst = index;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_loc(Assembler* assembler, EmitArg(loc)* dst) {
     Range colon_range;
-    if (parse_single_char(assembler, ':', &colon_range) != SUCCESS) {
+    if (parse_single_char(assembler, ':', &colon_range) != OK) {
         invalid_arg(assembler, colon_range);
         return ERROR;
     }
 
     SymbolIndex index;
-    if (parse_symbol_name(assembler, &index, NULL) != SUCCESS) {
+    if (parse_symbol_name(assembler, &index, NULL) != OK) {
         return ERROR;
     }
     *dst = index;
-    return SUCCESS;
+    return OK;
 }
 
 static Result parse_symbol_name(
@@ -326,7 +326,7 @@ static Result parse_symbol_name(
     if (range) {
         *range = (Range){ start, assembler->position };
     }
-    return SUCCESS;
+    return OK;
 }
 
 static Result skip_seperator(Assembler* assembler) {
@@ -343,7 +343,7 @@ static Result skip_seperator(Assembler* assembler) {
     if (!skipped) {
         return ERROR;
     }
-    return SUCCESS;
+    return OK;
 }
 
 typedef union Arg {
@@ -354,12 +354,12 @@ typedef union Arg {
 } Arg;
 
 #define PARSE_ARG(idx, kind, ...)                                               \
-    if (skip_seperator(assembler) != SUCCESS) {                                 \
+    if (skip_seperator(assembler) != OK) {                                      \
         usize pos = assembler->position;                                        \
         invalid_arg(assembler, (Range){ pos, pos });                            \
         return ERROR;                                                           \
     }                                                                           \
-    if (parse_##kind(assembler, &x##idx.as_##kind) != SUCCESS) {                \
+    if (parse_##kind(assembler, &x##idx.as_##kind) != OK) {                     \
         return ERROR;                                                           \
     }
 #define EMIT_ARG(idx, kind, ...) , x##idx.as_##kind
@@ -375,7 +375,7 @@ static Result assemble_one(Assembler* assembler) {
             assembler->mnemonic_opcodes,
             &opcode_raw,
             &mnemonic_range
-        ) != SUCCESS
+        ) != OK
     ) {
         invalid_instruction(assembler, mnemonic_range);
     }
@@ -390,7 +390,7 @@ static Result assemble_one(Assembler* assembler) {
                     &assembler->emitter                                         \
                     FOR_ALL(EMIT_ARG __VA_OPT__(, __VA_ARGS__))                 \
                 );                                                              \
-                return SUCCESS;
+                return OK;
         FOR_OPERATIONS(ASSEMBLE_ONE_CASE)
 
         case OP_SYS:
@@ -412,7 +412,7 @@ static Result assemble_syscall(Assembler* assembler) {
             assembler->mnemonic_syscalls,
             &syscall_raw,
             &mnemonic_range
-        ) != SUCCESS
+        ) != OK
     ) {
         invalid_syscall(assembler, mnemonic_range);
     }
@@ -427,7 +427,7 @@ static Result assemble_syscall(Assembler* assembler) {
                     &assembler->emitter                                         \
                     FOR_ALL(EMIT_ARG __VA_OPT__(, __VA_ARGS__))                 \
                 );                                                              \
-                return SUCCESS;
+                return OK;
         FOR_SYSCALLS(ASSEMBLE_SYSCALL_ONE_CASE)
         
         default:
@@ -444,7 +444,7 @@ static Result assembler_finish(Assembler* assembler, Bytecode* dst) {
     hash_map_free(Mnemonic, u8)(&assembler->mnemonic_opcodes);
     hash_map_free(Mnemonic, u8)(&assembler->mnemonic_syscalls);
     hash_map_free(String, usize)(&assembler->symbols);
-    return SUCCESS;
+    return OK;
 }
 
 static void unexpected_eof(Assembler* assembler) {

@@ -130,6 +130,9 @@ typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
     EXPRESSION_LITERAL_BOOL,
+    EXPRESSION_LITERAL_UINT,
+    EXPRESSION_LITERAL_INT,
+    EXPRESSION_LITERAL_FLOAT,
     EXPRESSION_UNARY_OPERATION,
     EXPRESSION_BINARY_OPERATION,
 } ExpressionKind;
@@ -140,6 +143,9 @@ typedef struct Expression {
         VariableRef variable;
         Function function;
         bool literal_bool;
+        u64 literal_uint;
+        i64 literal_int;
+        f64 literal_float;
         UnaryOperation unary_operation;
         BinaryOperation binary_operation;
     } as;

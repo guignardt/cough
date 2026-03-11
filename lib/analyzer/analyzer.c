@@ -381,6 +381,15 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
     case EXPRESSION_LITERAL_BOOL:
         expression->type = TYPE_BOOL;
         break;
+    case EXPRESSION_LITERAL_UINT:
+        expression->type = TYPE_UINT;
+        break;
+    case EXPRESSION_LITERAL_INT:
+        expression->type = TYPE_INT;
+        break;
+    case EXPRESSION_LITERAL_FLOAT:
+        expression->type = TYPE_FLOAT;
+        break;
 
     case EXPRESSION_UNARY_OPERATION:
         analyze_unary_operation(analyzer, &expression->as.unary_operation, expression->range, &expression->type);

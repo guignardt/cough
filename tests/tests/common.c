@@ -35,8 +35,8 @@ TestReporter test_reporter_new(void) {
     };
 }
 
-void test_reporter_free(TestReporter reporter) {
-    array_buf_free(i32)(&reporter.error_codes);
+void test_reporter_free(TestReporter* reporter) {
+    array_buf_free(i32)(&reporter->error_codes);
 }
 
 static void crashing_report_start(Reporter* raw, Severity severity, i32 code) {
