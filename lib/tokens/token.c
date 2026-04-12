@@ -32,7 +32,8 @@ static TokenKindDescription token_kind_table[] = {
     [TOKEN_PERCENT] =           {   1,  "%",        "`%`"                       },
 
     [TOKEN_IDENTIFIER] =        {   -1, NULL,       "<identifier>"              },
-    [TOKEN_NUMBER] =            {   -1, NULL,       "<number>"                  },
+    [TOKEN_INTEGER] =           {   -1, NULL,       "<integer>"                 },
+    [TOKEN_FLOATING] =          {   -1, NULL,       "<floating-point number>"   },
 
     [TOKEN_LET] =               {   3,  "let",      "`let`"                     },
     [TOKEN_FN] =                {   2,  "fn",       "`fn`"                      },

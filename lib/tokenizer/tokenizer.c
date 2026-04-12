@@ -110,6 +110,8 @@ static void remove_number_sign(Tokenizer* tokenizer, usize* number_start) {
 }
 
 static void tokenize_number(Tokenizer* tokenizer) {
+    bool error = false;
+
     // tokenize sign
     usize start;
     remove_number_sign(tokenizer, &start);
@@ -118,17 +120,46 @@ static void tokenize_number(Tokenizer* tokenizer) {
     // this is guaranteed to succeed: this function gets called with a numeric head character
     tokenize_digits(tokenizer);
 
+    bool is_integer = true;
+
     // tokenize optional fractional part
     Tokenizer tokenizer2 = *tokenizer;
     if (tokenizer2.source.data[tokenizer2.pos] == '.') {
         tokenizer2.pos++;
+        is_integer = false;
+        if (tokenize_digits(&tokenizer2)) {
+            *tokenizer = tokenizer2;
+        }
     }
-    if (tokenize_digits(&tokenizer2)) {
-        *tokenizer = tokenizer2;
+
+    // tokenize optional exponent
+    if (tokenizer->source.data[tokenizer->pos] == 'e') {
+        tokenizer->pos++;
+        if (tokenizer->source.data[tokenizer->pos] == '-') {
+            tokenizer->pos++;
+        }
+        if (!tokenize_digits(tokenizer)) {
+            error = true;
+        }
+        is_integer = false;
+    }
+
+    // disallow other trailing characters
+    char c;
+    while (
+        c = tokenizer->source.data[tokenizer->pos],
+        isalnum(c) || c == '_'
+    ) {
+        tokenizer->pos++;
+        error = true;
+    }
+    if (error) {
+        invalid_token(tokenizer, start);
     }
 
     // push token & sparse info
-    Token token = { .kind = TOKEN_NUMBER, .pos = start };
+    TokenKind kind = (is_integer) ? TOKEN_INTEGER : TOKEN_FLOATING;
+    Token token = { .kind = kind, .pos = start };
     array_buf_push(Token)(&tokenizer->dst->tokens, token);
     hash_map_insert(usize, usize)(
         &tokenizer->dst->_end_pos,

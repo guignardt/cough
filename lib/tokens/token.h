@@ -28,7 +28,8 @@ typedef enum TokenKind {
 
     TOKEN_IDENTIFIER,
 
-    TOKEN_NUMBER,
+    TOKEN_INTEGER,
+    TOKEN_FLOATING,
 
     TOKEN_LET,
     TOKEN_FN,

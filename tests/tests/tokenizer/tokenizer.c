@@ -10,7 +10,7 @@ int main(int argc, char const* argv[]) {
         "! | & ^ "
         " + - * / % "
         "hello "
-        "+4.3 "
+        " 15 +4.3 "
         "let fn \n false true";
     TestReporter reporter = test_reporter_new();
 
@@ -23,7 +23,7 @@ int main(int argc, char const* argv[]) {
 
     assert(reporter.error_codes.len == 0);
 
-    assert(tokens.tokens.len == 24);
+    assert(tokens.tokens.len == 25);
     for (usize i = 0; i < tokens.tokens.len; i++) {
         assert(tokens.tokens.data[i].kind == i);
     }
