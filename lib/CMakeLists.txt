@@ -15,5 +15,3 @@ add_subdirectory(assembler)
 add_subdirectory(disassembler)
 add_subdirectory(emitter)
 add_subdirectory(vm)
-
-target_compile_options(libcough PRIVATE "-Wno-gnu-alignof-expression")

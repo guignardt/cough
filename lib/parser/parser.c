@@ -39,7 +39,7 @@ static void unexpected_token(Parser* parser, TokenKind expected) {
 }
 
 static void unclosed_paren(Parser* parser, usize opening) {
-    report_start(parser->reporter, SEVERITY_ERROR, CE_UNCLOSED_PAREN);
+    report_start(parser->reporter, SEVERITY_ERROR, CE_UNCLOSED_PARENTHESIS);
     report_message(parser->reporter, format("expected closing parenthesis"));
     report_source_code(
         parser->reporter,
@@ -775,7 +775,7 @@ static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range*
         parse_integer(parser, &expr);
         break;
 
-    case TOKEN_FLOATING:
+    case TOKEN_FLOAT:
         parse_float(parser, &expr);
         break;
 

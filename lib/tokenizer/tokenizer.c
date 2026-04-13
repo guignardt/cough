@@ -160,7 +160,7 @@ static void tokenize_number(Tokenizer* tokenizer) {
     }
 
     // push token & sparse info
-    TokenKind kind = (is_integer) ? TOKEN_INTEGER : TOKEN_FLOATING;
+    TokenKind kind = (is_integer) ? TOKEN_INTEGER : TOKEN_FLOAT;
     Token token = { .kind = kind, .pos = start };
     array_buf_push(Token)(&tokenizer->dst->tokens, token);
     hash_map_insert(usize, usize)(

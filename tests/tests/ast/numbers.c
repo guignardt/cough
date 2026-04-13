@@ -42,7 +42,7 @@ int main(int argc, char const* argv[]) {
     test_float("1e5", 1e5);
     test_float("3.88e-6", 3.88e-6);
     test_float("3.88e-6", 3.88e-6);
-    test_float("1.8e+308", 1.8e+308);
+    test_float("1.7976931348623157e+308", 1.7976931348623157e+308);
     test_float("1.9e+308", INFINITY);
     test_float("1e+1000", INFINITY);
     test_float("2.23e-308", 2.23e-308);
