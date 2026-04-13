@@ -135,13 +135,15 @@ static void tokenize_number(Tokenizer* tokenizer) {
     // tokenize optional exponent
     if (tokenizer->source.data[tokenizer->pos] == 'e') {
         tokenizer->pos++;
-        if (tokenizer->source.data[tokenizer->pos] == '-') {
+        char s = tokenizer->source.data[tokenizer->pos];
+        if (s == '+' || s == '-') {
             tokenizer->pos++;
         }
         if (!tokenize_digits(tokenizer)) {
             error = true;
+        } else {
+            is_integer = false;
         }
-        is_integer = false;
     }
 
     // disallow other trailing characters

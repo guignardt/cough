@@ -211,11 +211,9 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     return OK;
 }
 
-static void parse_integer(Parser* parser, Expression* dst) {
-    Token token = parser->tokens.tokens.data[parser->pos++]; // TOKEN_INTEGER
-    Range range = token_range(parser->tokens, token);
-    String text = string_slice(parser->source, range);
-
+// on overflow, returns -1
+// text must be nonempty
+static int parse_integer_sign_magnitude(String text, usize* p_len, i8* p_sign, u64* p_magnitude) {
     usize pos = 0;
 
     i8 sign;
@@ -226,17 +224,45 @@ static void parse_integer(Parser* parser, Expression* dst) {
     }
 
     u64 magnitude = 0;
+    bool overflowed = false;
     for (; pos < text.len; pos++) {
-        u64 digit = text.data[pos] - '0';
-        if (__builtin_mul_overflow(magnitude, 10, &magnitude)) {
-            goto parse_integer_overflow;
+        char c = text.data[pos];
+        if (!isdigit(c)) {
+            break;
         }
-        if (__builtin_add_overflow(magnitude, digit, &magnitude)) {
-            goto parse_integer_overflow;
+        u64 d = c - '0';
+        if (!overflowed) {
+            if (__builtin_mul_overflow(magnitude, 10, &magnitude)) {
+                overflowed = true;
+                break;
+            }
+            if (__builtin_add_overflow(magnitude, d, &magnitude)) {
+                overflowed = true;
+                break;
+            }
         }
     }
 
+    if (p_len) *p_len = pos;
+    if (p_sign) *p_sign = sign;
+    if (p_magnitude) *p_magnitude = magnitude;
+    return -overflowed;
+}
+
+static void parse_integer(Parser* parser, Expression* dst) {
+    Token token = parser->tokens.tokens.data[parser->pos++]; // TOKEN_INTEGER
+    Range range = token_range(parser->tokens, token);
+    String text = string_slice(parser->source, range);
+
+    i8 sign;
+    u64 magnitude;
+    bool overflowed = parse_integer_sign_magnitude(text, NULL, &sign, &magnitude);
+
     if (sign == 0) {
+        if (overflowed) {
+            integer_literal_overflow(parser, range, false);
+            magnitude = 0;
+        }
         *dst = (Expression){
             .kind = EXPRESSION_LITERAL_UINT,
             .as.literal_uint = magnitude,
@@ -246,15 +272,18 @@ static void parse_integer(Parser* parser, Expression* dst) {
         return;
     }
 
-    i64 value = 0;
+    i64 value;
     if (sign == 1) {
         if (magnitude >= (1ull << 63)) {
-            goto parse_integer_overflow;
+            overflowed = true;
+            value = 0;
+        } else {
+            value = magnitude;
         }
-        value = magnitude;
     } else {
         if (magnitude > (1ull << 63)) {
-            goto parse_integer_overflow;
+            overflowed = true;
+            value = 0;
         } else if (magnitude == (1ull << 63)) {
             value = 1ull << 63;
         } else {
@@ -262,19 +291,13 @@ static void parse_integer(Parser* parser, Expression* dst) {
         }
     }
 
+    if (overflowed) {
+        integer_literal_overflow(parser, range, true);
+    }
+
     *dst = (Expression){
         .kind = EXPRESSION_LITERAL_INT,
         .as.literal_int = value,
-        .range = range,
-        .type = TYPE_INVALID,
-    };
-    return;
-
-parse_integer_overflow:
-    integer_literal_overflow(parser, range, sign != 0);
-    *dst = (Expression){
-        .kind = (sign == 0) ? EXPRESSION_LITERAL_UINT : EXPRESSION_LITERAL_INT,
-        .as.literal_uint = 0,
         .range = range,
         .type = TYPE_INVALID,
     };
@@ -400,9 +423,31 @@ static void parse_float(Parser* parser, Expression* dst) {
         digits_read++;
     }
 
-    // TODO: parse exponent
+    // parse exponent
+    bool exp10_extreme = false;
+    if (pos < text.len && text.data[pos] == 'e') {
+        pos++;
+        i8 bias_sign;
+        u64 bias_magnitude;
+        exp10_extreme = parse_integer_sign_magnitude(
+            string_slice(text, (Range){ pos, text.len }),
+            NULL,
+            &bias_sign,
+            &bias_magnitude
+        );
+        exp10_extreme |= bias_magnitude >= INT64_MAX / 2;
+        if (!exp10_extreme) {
+            exp10 += (bias_sign >= 0) ? bias_magnitude : -bias_magnitude;
+        }
+    }
 
-    f64 magnitude = build_positive_f64(mantissa, exp10);
+    f64 magnitude;
+    if (exp10_extreme && mantissa > 0) {
+        magnitude = (exp10 > 0) ? +INFINITY : +0.0;
+    } else {
+        magnitude = build_positive_f64(mantissa, exp10);
+    }
+
     f64 value = (sign >= 0) ? magnitude : -magnitude;
     *dst = (Expression){
         .kind = EXPRESSION_LITERAL_FLOAT,

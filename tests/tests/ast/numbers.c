@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "tests/common.h"
 
 void test_uint(char const* text, u64 value);
@@ -37,9 +39,16 @@ int main(int argc, char const* argv[]) {
     test_float("3.1415926535897932385", 3.1415926535897932385);
     test_float("2.7182818284590452354", 2.7182818284590452354);
     test_float("11235.8132134", 11235.8132134);
-
-    // TODO: test denormalized floats & infinity (when scientific notation is implemented)
-
+    test_float("1e5", 1e5);
+    test_float("3.88e-6", 3.88e-6);
+    test_float("3.88e-6", 3.88e-6);
+    test_float("1.8e+308", 1.8e+308);
+    test_float("1.9e+308", INFINITY);
+    test_float("1e+1000", INFINITY);
+    test_float("2.23e-308", 2.23e-308);
+    test_float("1e-1000", 0.0);
+    test_float("4.94e-324", 4.84e-324);
+    
     return 0;
 }
 

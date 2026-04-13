@@ -40,7 +40,7 @@ static IntFracExp exp10_table[] = {{"""
 
     order = 10
     for exp10 in range(1, exp10_max + 1):
-        gen(exp10, order, 0)
+        gen(exp10, order, 64)
         order *= 10
     
     print("};\n")
