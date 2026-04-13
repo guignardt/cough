@@ -95,6 +95,36 @@ static void generate_expression(Generator gen, Expression expression) {
         );
         break;
 
+    case EXPRESSION_LITERAL_UINT:
+        // all 0s for false, all 1s for true
+        // this ensures `not` & friends work correctly as the VM doesn't use a dedicated
+        // boolean type, and instead uses `UInt`.
+        emit(sca)(
+            gen.emitter,
+            (Word){ .as_uint = expression.as.literal_uint }
+        );
+        break;
+
+    case EXPRESSION_LITERAL_INT:
+        // all 0s for false, all 1s for true
+        // this ensures `not` & friends work correctly as the VM doesn't use a dedicated
+        // boolean type, and instead uses `UInt`.
+        emit(sca)(
+            gen.emitter,
+            (Word){ .as_int = expression.as.literal_int }
+        );
+        break;
+            
+    case EXPRESSION_LITERAL_FLOAT:
+        // all 0s for false, all 1s for true
+        // this ensures `not` & friends work correctly as the VM doesn't use a dedicated
+        // boolean type, and instead uses `UInt`.
+        emit(sca)(
+            gen.emitter,
+            (Word){ .as_float = expression.as.literal_float }
+        );
+        break;
+
     case EXPRESSION_UNARY_OPERATION:
         generate_unary_operation(gen, expression.as.unary_operation);
         break;
@@ -128,7 +158,7 @@ static void generate_binary_operation(Generator gen, BinaryOperation binary_oper
     Expression rhs = gen.expressions[binary_operation.operand_right];
 
     if (binary_operation.operator == OPERATION_FUNCTION_CALL) {
-        // function currently only consist of a location
+        // functions currently only consist of a location
         generate_expression(gen, rhs);
         generate_expression(gen, lhs);
     } else {
