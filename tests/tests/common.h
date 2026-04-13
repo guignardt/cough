@@ -2,7 +2,8 @@
 
 #include <assert.h>
 
-#include "collections/array.h"
+#include "util/collections/array.h"
+
 #include "diagnostics/report.h"
 
 #include "source/source.h"

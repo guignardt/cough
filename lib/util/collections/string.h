@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 
-#include "primitives/primitives.h"
+#include "util/primitives/primitives.h"
+#include "util/collections/array.h"
 #include "diagnostics/errno.h"
-#include "collections/array.h"
 
 typedef struct String {
     char const* data;

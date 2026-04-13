@@ -16,7 +16,7 @@ def gen(exp10, order, shift):
 
 def main():
     print(
-        f"""#include "primitives/primitives.h"
+        f"""#include "util/primitives/primitives.h"
 
 #define EXP10_MIN ({exp10_min})
 #define EXP10_MAX ({exp10_max})

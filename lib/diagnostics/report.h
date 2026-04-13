@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-#include "collections/array.h"
-#include "collections/string.h"
+#include "util/collections/array.h"
+#include "util/collections/string.h"
 #include "diagnostics/log.h"
 
 typedef struct Reporter {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "primitives/primitives.h"
+#include "util/primitives/primitives.h"
 #include "bytecode/bytecode.h"
 
 typedef struct VmSystem VmSystem;

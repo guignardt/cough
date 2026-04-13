@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "collections/hash_map.h"
+#include "util/collections/hash_map.h"
 
 typedef const char* Person;
 

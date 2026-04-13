@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ops/eq.h"
+#include "util/ops/eq.h"
 
 #define IMPL_EQ_PRIMITIVE(T) bool eq(T)(T a, T b) { return a == b; }
 

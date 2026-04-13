@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "collections/array.h"
+#include "util/collections/array.h"
 
 typedef struct Foo {
     i32 id;

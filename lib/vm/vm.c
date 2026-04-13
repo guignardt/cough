@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "alloc/alloc.h"
+#include "util/alloc/alloc.h"
 #include "vm/vm.h"
 #include "vm/diagnostics.h"
 

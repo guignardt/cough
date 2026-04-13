@@ -1,7 +1,7 @@
 #pragma once
 
-#include "primitives/primitives.h"
-#include "collections/string.h"
+#include "util/primitives/primitives.h"
+#include "util/collections/string.h"
 
 typedef struct Hasher {
     u64 state;

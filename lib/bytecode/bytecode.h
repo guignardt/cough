@@ -2,9 +2,9 @@
 
 #include <stdalign.h>
 
-#include "collections/array.h"
-#include "ops/eq.h"
-#include "ops/hash.h"
+#include "util/collections/array.h"
+#include "util/ops/eq.h"
+#include "util/ops/hash.h"
 
 typedef union Word {
     void const* as_ptr;

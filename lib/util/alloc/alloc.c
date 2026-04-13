@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "alloc/alloc.h"
+#include "util/alloc/alloc.h"
 #include "diagnostics/errno.h"
 
 Errno try_malloc(usize size, void** dst) {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bytecode/bytecode.h"
-#include "collections/array.h"
+#include "util/collections/array.h"
 
 typedef usize SymbolIndex;
 

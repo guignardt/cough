@@ -1,4 +1,4 @@
-#include "ops/hash.h"
+#include "util/ops/hash.h"
 
 Hasher new_hasher(void) {
     return (Hasher){ .state = 0 };

@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include "primitives/primitives.h"
-#include "collections/array.h"
-#include "collections/string.h"
+#include "util/primitives/primitives.h"
+#include "util/collections/array.h"
+#include "util/collections/string.h"
 #include "diagnostics/errno.h"
 
 typedef struct LineColumn {

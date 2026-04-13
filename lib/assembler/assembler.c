@@ -1,7 +1,7 @@
 #include <ctype.h>
 
 #include "assembler/assembler.h"
-#include "collections/hash_map.h"
+#include "util/collections/hash_map.h"
 #include "emitter/emitter.h"
 
 DECL_HASH_MAP(Mnemonic, u8)

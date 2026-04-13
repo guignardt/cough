@@ -1,6 +1,6 @@
 #include <stdalign.h>
 
-#include "primitives/primitives.h"
+#include "util/primitives/primitives.h"
 
 const void* align_down(const void* ptr, usize alignment);
 void* align_down_mut(void* ptr, usize alignment);

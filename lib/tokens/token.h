@@ -1,8 +1,8 @@
 #pragma once
 
-#include "primitives/primitives.h"
-#include "collections/array.h"
-#include "collections/hash_map.h"
+#include "util/primitives/primitives.h"
+#include "util/collections/array.h"
+#include "util/collections/hash_map.h"
 
 typedef enum TokenKind {
     TOKEN_PAREN_LEFT,

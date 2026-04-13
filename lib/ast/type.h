@@ -1,7 +1,7 @@
 #pragma once
 
-#include "collections/array.h"
-#include "collections/hash_map.h"
+#include "util/collections/array.h"
+#include "util/collections/hash_map.h"
 #include "ast/memory.h"
 
 typedef usize TypeId;

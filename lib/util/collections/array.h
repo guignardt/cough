@@ -2,8 +2,8 @@
 
 #include <stdlib.h>
 
-#include "primitives/primitives.h"
-#include "alloc/buf.h"
+#include "util/primitives/primitives.h"
+#include "util/alloc/buf.h"
 
 typedef struct Range {
     usize start;

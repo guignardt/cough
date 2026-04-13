@@ -1,5 +1,5 @@
 #include "bytecode/bytecode.h"
-#include "ops/ptr.h"
+#include "util/ops/ptr.h"
 
 IMPL_ARRAY_BUF(Byteword);
 

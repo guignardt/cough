@@ -1,6 +1,6 @@
 #pragma once
 
-#include "collections/array.h"
+#include "util/collections/array.h"
 
 typedef usize ScopeId;
 #define ROOT_SCOPE_ID ((usize)0)

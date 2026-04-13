@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "primitives/primitives.h"
+#include "util/primitives/primitives.h"
 #include "diagnostics/result.h"
 
 Errno try_malloc(usize size, void** dst);

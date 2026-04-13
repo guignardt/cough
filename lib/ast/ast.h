@@ -1,6 +1,6 @@
 #pragma once
 
-#include "collections/array.h"
+#include "util/collections/array.h"
 #include "ast/type.h"
 #include "ast/binding.h"
 #include "ast/expression.h"

@@ -3,8 +3,8 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "collections/array.h"
-#include "collections/string.h"
+#include "util/collections/array.h"
+#include "util/collections/string.h"
 #include "diagnostics/errno.h"
 
 String string_slice(String string, Range range) {

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "collections/string.h"
+#include "util/collections/string.h"
 #include "diagnostics/log.h"
 
 int main(int argc, char const* argv[]) {

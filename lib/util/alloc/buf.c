@@ -1,8 +1,8 @@
 #include <string.h>
 
-#include "alloc/alloc.h"
-#include "alloc/buf.h"
-#include "ops/ptr.h"
+#include "util/alloc/alloc.h"
+#include "util/alloc/buf.h"
+#include "util/ops/ptr.h"
 
 Buf buf_new(usize capacity) {
     if (capacity == 0) {

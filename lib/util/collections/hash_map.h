@@ -4,10 +4,10 @@
 #include <string.h>
 #include <stdalign.h>
 
-#include "ops/eq.h"
-#include "ops/hash.h"
-#include "ops/ptr.h"
-#include "alloc/alloc.h"
+#include "util/ops/eq.h"
+#include "util/ops/hash.h"
+#include "util/ops/ptr.h"
+#include "util/alloc/alloc.h"
 
 #define HASH_MAP_NAME(name, KEY, VALUE) name##_##KEY##_##VALUE
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "collections/array.h"
+#include "util/collections/array.h"
 
 typedef void* Allocation;
 DECL_ARRAY_BUF(Allocation)
