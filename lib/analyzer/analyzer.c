@@ -145,8 +145,8 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression(Analyzer* analyzer, Expression* expression);
 static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range, TypeId* dst);
 static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range, TypeId* dst);
-static TypeId type_bitwise_binary( Analyzer* analyzer, Expression* lhs, Expression* rhs);
-static TypeId type_arithmetic_binary( Analyzer* analyzer, Expression* lhs, Expression* rhs, int* index);
+static TypeId type_bitwise_binary( Analyzer* analyzer, Expression* first, Expression* second);
+static TypeId type_arithmetic_binary( Analyzer* analyzer, Expression* first, Expression* second, int* index);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
@@ -452,46 +452,46 @@ static void analyze_binary_operation(
     Range range,
     TypeId* dst
 ) {
-    Expression* lhs = &analyzer->expressions[binary_operation->operand_left];
-    Expression* rhs = &analyzer->expressions[binary_operation->operand_right];
-    analyze_expression(analyzer, lhs);
-    analyze_expression(analyzer, rhs);
+    Expression* first = &analyzer->expressions[binary_operation->first];
+    Expression* second = &analyzer->expressions[binary_operation->second];
+    analyze_expression(analyzer, first);
+    analyze_expression(analyzer, second);
 
     int index;
     switch (binary_operation->operator) {
     case OPERATION_FUNCTION_CALL:;
-        if (lhs->type == TYPE_INVALID) {
+        if (second->type == TYPE_INVALID) {
             return;
         }
-        Type lhs_type = get_type(*analyzer->types, lhs->type);
-        if (lhs_type.kind != TYPE_FUNCTION) {
-            called_non_function(analyzer, lhs->type, lhs->range);
+        Type callee_type = get_type(*analyzer->types, second->type);
+        if (callee_type.kind != TYPE_FUNCTION) {
+            called_non_function(analyzer, second->type, second->range);
             return;
         }
-        if (lhs_type.as.function.input != rhs->type) {
+        if (callee_type.as.function.input != first->type) {
             mismatched_types(
                 analyzer,
-                lhs_type.as.function.input,
+                callee_type.as.function.input,
                 false,
                 (Range){0},
-                rhs->type,
-                rhs->range
+                first->type,
+                first->range
             );
         }
-        *dst = lhs_type.as.function.output;
+        *dst = callee_type.as.function.output;
         break;
 
     case OPERATION_OR:
     case OPERATION_AND:
     case OPERATION_XOR:;
-        *dst = type_bitwise_binary(analyzer, lhs, rhs);
+        *dst = type_bitwise_binary(analyzer, first, second);
         break;
 
     // only `OPERATION_ADD` ist actually produced by the parser
     case OPERATION_ADD: // = `OPERATION_ADD_UINT`
     case OPERATION_ADD_INT:
     case OPERATION_ADD_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        *dst = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_ADD + index;
         break;
 
@@ -499,7 +499,7 @@ static void analyze_binary_operation(
     case OPERATION_SUB: // = `OPERATION_ADD_UINT`
     case OPERATION_SUB_INT:
     case OPERATION_SUB_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        *dst = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_SUB + index;
         break;
 
@@ -507,7 +507,7 @@ static void analyze_binary_operation(
     case OPERATION_MUL: // = `OPERATION_ADD_UINT`
     case OPERATION_MUL_INT:
     case OPERATION_MUL_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        *dst = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_MUL + index;
         break;
 
@@ -515,7 +515,7 @@ static void analyze_binary_operation(
     case OPERATION_DIV: // = `OPERATION_ADD_UINT`
     case OPERATION_DIV_INT:
     case OPERATION_DIV_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, lhs, rhs, &index);
+        *dst = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_DIV + index;
         break;
     }

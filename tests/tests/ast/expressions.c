@@ -16,11 +16,11 @@ int main(int argc, char const** argv) {
     assert(or.kind == EXPRESSION_BINARY_OPERATION);
     assert(or.as.binary_operation.operator == OPERATION_OR);
     
-    Expression and = ast.expressions.data[or.as.binary_operation.operand_left];
+    Expression and = ast.expressions.data[or.as.binary_operation.first];
     assert(and.kind == EXPRESSION_BINARY_OPERATION);
     assert(and.as.binary_operation.operator = OPERATION_AND);
     
-    Expression not = ast.expressions.data[and.as.binary_operation.operand_left];
+    Expression not = ast.expressions.data[and.as.binary_operation.first];
     assert(not.kind == EXPRESSION_UNARY_OPERATION);
     assert(not.as.unary_operation.operator == OPERATION_NOT);
     
@@ -28,19 +28,19 @@ int main(int argc, char const** argv) {
     assert(b_ref.kind == EXPRESSION_VARIABLE);
     assert(eq(String)(b_ref.as.variable.name.string, STRING_LITERAL("b")));
 
-    Expression call = ast.expressions.data[and.as.binary_operation.operand_right];
+    Expression call = ast.expressions.data[and.as.binary_operation.second];
     assert(call.kind == EXPRESSION_BINARY_OPERATION);
     assert(call.as.binary_operation.operator == OPERATION_FUNCTION_CALL);
     
-    Expression id = ast.expressions.data[call.as.binary_operation.operand_left];
+    Expression id = ast.expressions.data[call.as.binary_operation.second];
     assert(id.kind == EXPRESSION_VARIABLE);
     assert(eq(String)(id.as.variable.name.string, STRING_LITERAL("id")));
 
-    Expression tr = ast.expressions.data[call.as.binary_operation.operand_right];
+    Expression tr = ast.expressions.data[call.as.binary_operation.first];
     assert(tr.kind == EXPRESSION_LITERAL_BOOL);
     assert(tr.as.literal_bool == true);
 
-    Expression fa = ast.expressions.data[or.as.binary_operation.operand_right];
+    Expression fa = ast.expressions.data[or.as.binary_operation.second];
     assert(fa.kind == EXPRESSION_LITERAL_BOOL);
     assert(fa.as.literal_bool == false);
 

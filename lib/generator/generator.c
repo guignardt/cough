@@ -154,17 +154,11 @@ static void generate_unary_operation(Generator gen, UnaryOperation unary_operati
 }
 
 static void generate_binary_operation(Generator gen, BinaryOperation binary_operation) {
-    Expression lhs = gen.expressions[binary_operation.operand_left];
-    Expression rhs = gen.expressions[binary_operation.operand_right];
+    Expression first = gen.expressions[binary_operation.first];
+    Expression second = gen.expressions[binary_operation.second];
 
-    if (binary_operation.operator == OPERATION_FUNCTION_CALL) {
-        // functions currently only consist of a location
-        generate_expression(gen, rhs);
-        generate_expression(gen, lhs);
-    } else {
-        generate_expression(gen, lhs);
-        generate_expression(gen, rhs);
-    }
+    generate_expression(gen, first);
+    generate_expression(gen, second);
 
     switch (binary_operation.operator) {
     case OPERATION_FUNCTION_CALL:

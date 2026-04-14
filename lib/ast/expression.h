@@ -120,10 +120,13 @@ typedef enum BinaryOperator {
     OPERATION_DIV_FLOAT,
 } BinaryOperator;
 
+// first is computed (and pushed) before second
+// for function calls, we want the location to be on top, so
+// the first is the argument and the second is the location
 typedef struct BinaryOperation {
     BinaryOperator operator;
-    ExpressionId operand_left;
-    ExpressionId operand_right;
+    ExpressionId first;
+    ExpressionId second;
 } BinaryOperation;
 
 typedef enum ExpressionKind {

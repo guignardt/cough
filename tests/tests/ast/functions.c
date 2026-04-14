@@ -21,15 +21,15 @@ int main(int argc, char const** argv) {
     assert(output.kind == EXPRESSION_BINARY_OPERATION);
     BinaryOperation call = output.as.binary_operation;
     assert(call.operator == OPERATION_FUNCTION_CALL);
-    Expression lhs = ast.expressions.data[call.operand_left];
-    assert(lhs.kind == EXPRESSION_VARIABLE);
-    Binding lhs_binding = get_binding(ast.bindings, lhs.as.variable.binding);
-    assert(lhs_binding.kind == BINDING_VALUE);
-    assert(eq(String)(lhs_binding.as.value.name, STRING_LITERAL("identity")));
-    Expression rhs = ast.expressions.data[call.operand_right];
-    assert(rhs.kind == EXPRESSION_VARIABLE);
-    Binding rhs_binding = get_binding(ast.bindings, rhs.as.variable.binding);
-    assert(eq(String)(rhs_binding.as.value.name, STRING_LITERAL("x")));
+    Expression callee = ast.expressions.data[call.second];
+    assert(callee.kind == EXPRESSION_VARIABLE);
+    Binding callee_binding = get_binding(ast.bindings, callee.as.variable.binding);
+    assert(callee_binding.kind == BINDING_VALUE);
+    assert(eq(String)(callee_binding.as.value.name, STRING_LITERAL("identity")));
+    Expression argument = ast.expressions.data[call.first];
+    assert(argument.kind == EXPRESSION_VARIABLE);
+    Binding argument_binding = get_binding(ast.bindings, argument.as.variable.binding);
+    assert(eq(String)(argument_binding.as.value.name, STRING_LITERAL("x")));
 
     return 0;
 }

@@ -651,12 +651,17 @@ Result try_parse_expression_continue(
     }
 
     Range range = { lhs_range.start, rhs_range.end };
+    if (operator == OPERATION_FUNCTION_CALL) {
+        ExpressionId tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
     expr = box_expression(parser, (Expression){
         .kind = EXPRESSION_BINARY_OPERATION,
         .as.binary_operation = {
             .operator = operator,
-            .operand_left = lhs,
-            .operand_right = rhs,
+            .first = lhs,
+            .second = rhs,
         },
         .range = range,
         .type = TYPE_INVALID
