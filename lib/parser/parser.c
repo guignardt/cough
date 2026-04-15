@@ -186,6 +186,7 @@ static Result parse_module2(Parser* parser, Module* dst) {
     }
     *dst = (Module){
         .global_constants = global_constants,
+        // `global_scope` is set by the analyzer
     };
     return OK;
 }
