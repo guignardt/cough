@@ -6,7 +6,7 @@ int main(int argc, char const** argv) {
     char const source[] = 
         "logical :: fn x: Bool -> Bool => !x & true | x;"
     ;
-    Bytecode generated = source_to_bytecode(STRING_LITERAL(source));
+    Bytecode generated = source_to_module_bytecode(STRING_LITERAL(source));
     char const* assembly[] = {
         ":logical",
         "   res 1",

@@ -8,37 +8,40 @@ typedef struct Generator {
     BindingRegistry bindings;
 } Generator;
 
+static Generator generate_functions(AstData data, Emitter* emitter);
 static void generate_function(Generator gen, Function function);
 static void generate_pattern_match(Generator gen, Pattern pattern);
-static void generate_expression(Generator gen, Expression expression);
+static void generate_expression2(Generator gen, Expression expression);
 static void generate_unary_operation(Generator gen, UnaryOperation unary_operation);
 static void generate_binary_operation(Generator gen, BinaryOperation binary_operation);
 
-void generate(Ast* ast, Emitter* emitter) {
-    for (size_t i = 0; i < ast->functions.len; i++) {
-        Function* function = &ast->expressions.data[ast->functions.data[i]].as.function;
-        function->symbol = emit_new_symbol(emitter);
-    }
+// FIXME: change this, since we don't use the module?
+void generate_module(Module module, AstData data, Emitter* emitter) {
+    generate_functions(data, emitter);
+}
 
+static Generator generate_functions(AstData data, Emitter* emitter) {
+    emit_many_new_symbols(emitter, data.functions.len);
     Generator generator = {
         .emitter = emitter,
-        .expressions = ast->expressions.data,
-        .bindings = ast->bindings,
+        .expressions = data.expressions.data,
+        .bindings = data.bindings,
     };
-
-    for (size_t i = 0; i < ast->functions.len; i++) {
-        Function function = ast->expressions.data[ast->functions.data[i]].as.function;
+    for (size_t i = 0; i < data.functions.len; i++) {
+        Function function = data.expressions.data[data.functions.data[i]].as.function;
         generate_function(generator, function);
     }
+    return generator;
 }
 
 static void generate_function(Generator gen, Function function) {
-    emit_symbol_location(gen.emitter, function.symbol);
+    // function_id == symbol
+    emit_symbol_location(gen.emitter, function.function_id);
     if (function.variable_space > 0) {
         emit(res)(gen.emitter, function.variable_space);
     }
     generate_pattern_match(gen, function.input);
-    generate_expression(gen, gen.expressions[function.output]);
+    generate_expression2(gen, gen.expressions[function.output]);
     emit(ret)(gen.emitter);
 }
 
@@ -55,7 +58,7 @@ static void generate_pattern_match(Generator gen, Pattern pattern) {
     }
 }
 
-static void generate_expression(Generator gen, Expression expression) {
+static void generate_expression2(Generator gen, Expression expression) {
     switch (expression.kind) {
     case EXPRESSION_VARIABLE:;
         BindingId binding_id = expression.as.variable.binding;
@@ -66,7 +69,8 @@ static void generate_expression(Generator gen, Expression expression) {
             Expression value = gen.expressions[binding.as.value.store.as.constant];
             switch (value.kind) {
             case EXPRESSION_FUNCTION:
-                emit(loc)(gen.emitter, value.as.function.symbol);
+                // function_id == symbol
+                emit(loc)(gen.emitter, value.as.function.function_id);
                 break;
             default:
                 // internal error
@@ -82,7 +86,8 @@ static void generate_expression(Generator gen, Expression expression) {
         break;
     
     case EXPRESSION_FUNCTION:
-        emit(loc)(gen.emitter, expression.as.function.symbol);
+        // function_id == symbol
+        emit(loc)(gen.emitter, expression.as.function.function_id);
         break;
 
     case EXPRESSION_LITERAL_BOOL:
@@ -137,7 +142,7 @@ static void generate_expression(Generator gen, Expression expression) {
 
 static void generate_unary_operation(Generator gen, UnaryOperation unary_operation) {
     Expression operand = gen.expressions[unary_operation.operand];
-    generate_expression(gen, operand);
+    generate_expression2(gen, operand);
     switch (unary_operation.operator) {
     case OPERATION_NOT:
         emit(not)(gen.emitter);
@@ -157,8 +162,8 @@ static void generate_binary_operation(Generator gen, BinaryOperation binary_oper
     Expression first = gen.expressions[binary_operation.first];
     Expression second = gen.expressions[binary_operation.second];
 
-    generate_expression(gen, first);
-    generate_expression(gen, second);
+    generate_expression2(gen, first);
+    generate_expression2(gen, second);
 
     switch (binary_operation.operator) {
     case OPERATION_FUNCTION_CALL:

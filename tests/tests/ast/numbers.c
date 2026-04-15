@@ -52,72 +52,64 @@ int main(int argc, char const* argv[]) {
     return 0;
 }
 
-Result parse_num(char const* text, Ast* dst_ast, Expression* dst) {
+int parse_num(char const* text, ExpressionId* dst, AstData* dst_data) {
     TestReporter reporter = test_reporter_new();
-    StringBuf source_text = format("dummy :: fn x: Bool -> Bool => (%s);\n", text);
+    String source_text = (String){ .data = text, .len = strlen(text) };
     TokenStream tokens;
-    assert(tokenize(
-        (String){
-            .data = source_text.data,
-            .len = source_text.len
-        },
-        &reporter.base,
-        &tokens
-    ));
-    Ast ast;
-    Result result = OK;
-    if (!parse(tokens, &reporter.base, &ast)) {
+    tokenize(source_text, &reporter.base, &tokens);
+    assert(reporter.error_codes.len == 0);
+    parse_expression(tokens, &reporter.base, dst, dst_data);
+    if (reporter.error_codes.len > 0) {
+        assert(reporter.error_codes.len == 1);
         assert(reporter.error_codes.data[0] == CE_INTEGER_LITERAL_OVERFLOWED);
-        result = ERROR;
     }
-    assert(ast.root.global_constants.len >= 1);
-    ExpressionId func_id = ast.root.global_constants.data[0].value;
-    ExpressionId expr_id = ast.expressions.data[func_id].as.function.output;
-    *dst_ast = ast;
-    *dst = ast.expressions.data[expr_id];
     test_reporter_free(&reporter);
-    return result;
+    return reporter.error_codes.len;
 }
 
 void test_uint(char const* text, u64 value) {
-    Ast ast;
-    Expression expr;
-    assert(parse_num(text, &ast, &expr) == OK);
+    ExpressionId id;
+    AstData data;
+    assert(!parse_num(text, &id, &data));
+    Expression expr = data.expressions.data[id];
     assert(expr.kind == EXPRESSION_LITERAL_UINT);
     assert(expr.as.literal_uint == value);
-    ast_free(&ast);
+    ast_data_free(&data);
 }
 
 void test_int(char const* text, i64 value) {
-    Ast ast;
-    Expression expr;
-    assert(parse_num(text, &ast, &expr) == OK);
+    ExpressionId id;
+    AstData data;
+    assert(!parse_num(text, &id, &data));
+    Expression expr = data.expressions.data[id];
     assert(expr.kind == EXPRESSION_LITERAL_INT);
-    assert(expr.as.literal_int == value);
-    ast_free(&ast);
+    assert(expr.as.literal_uint == value);
+    ast_data_free(&data);
 }
 
 void test_uint_overflow(char const* text) {
-    Ast ast;
-    Expression expr;
-    assert(parse_num(text, &ast, &expr) == ERROR);
+    ExpressionId id;
+    AstData data;
+    assert(parse_num(text, &id, &data));
+    Expression expr = data.expressions.data[id];
     assert(expr.kind == EXPRESSION_LITERAL_UINT);
-    ast_free(&ast);
+    ast_data_free(&data);
 }
 
 void test_int_overflow(char const* text) {
-    Ast ast;
-    Expression expr;
-    assert(parse_num(text, &ast, &expr) == ERROR);
+    ExpressionId id;
+    AstData data;
+    assert(parse_num(text, &id, &data));
+    Expression expr = data.expressions.data[id];
     assert(expr.kind == EXPRESSION_LITERAL_INT);
-    ast_free(&ast);
+    ast_data_free(&data);
 }
 
 void test_float(char const* text, f64 value) {
-    TestReporter reporter = test_reporter_new();
-    Ast ast;
-    Expression expr;
-    assert(parse_num(text, &ast, &expr) == OK);
+    ExpressionId id;
+    AstData data;
+    assert(!parse_num(text, &id, &data));
+    Expression expr = data.expressions.data[id];
     assert(expr.kind == EXPRESSION_LITERAL_FLOAT);
     typedef union Cast {
         f64 value;
@@ -126,5 +118,5 @@ void test_float(char const* text, f64 value) {
     Cast computed = { .value = expr.as.literal_float };
     Cast expected = { .value = value };
     assert(computed.bits == expected.bits);
-    ast_free(&ast);
+    ast_data_free(&data);
 }

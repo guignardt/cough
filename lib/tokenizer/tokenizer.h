@@ -11,4 +11,4 @@ typedef enum TokenizerError {
 
 // *dst will be replaced without being freed
 // *dst may be uninitialized
-bool tokenize(String source, Reporter* reporter, TokenStream* dst);
+void tokenize(String source, Reporter* reporter, TokenStream* dst);

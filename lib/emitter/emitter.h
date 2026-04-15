@@ -16,7 +16,10 @@ Emitter emitter_new(void);
 void emitter_free(Emitter* emitter);
 bool emitter_finish(Emitter* emitter, Bytecode* dst);
 
+// these are guaranteed to be 0, 1, 2, ...
 SymbolIndex emit_new_symbol(Emitter* emitter);
+// emits the first symbol
+SymbolIndex emit_many_new_symbols(Emitter* emitter, usize n);
 bool emit_symbol_location(Emitter* emitter, SymbolIndex symbol_index);
 
 #define EmitArg(kind) EmitArg_##kind

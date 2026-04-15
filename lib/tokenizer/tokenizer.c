@@ -198,7 +198,7 @@ bool tokenize_one(Tokenizer* tokenizer) {
     return true;
 }
 
-bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
+void tokenize(String source, Reporter* reporter, TokenStream* dst) {
     TokenStream stream = {
         .source = source,
         .tokens = array_buf_new(Token)(),
@@ -214,8 +214,7 @@ bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
     // TODO: don't quit directly when a tokenization failed
     while (tokenize_one(&tokenizer));
     if (tokenizer.error) {
-        return false;
+        return;
     }
     *dst = stream;
-    return true;
 }

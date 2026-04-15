@@ -135,14 +135,14 @@ static Analyzer with_scope_location(Analyzer analyzer, ScopeLocation scope_locat
     };
 }
 
-static void analyze_module(Analyzer* analyzer, Module* module);
+static void analyze_module2(Analyzer* analyzer, Module* module);
 static void register_constant_def(Analyzer* analyzer, ConstantDef* constant_def);
 static void type_constant_def(Analyzer* analyzer, ConstantDef* constant_def);
 static void analyze_constant_def(Analyzer* analyzer, ConstantDef* constant_def);
 static void analyze_function_signature(Analyzer* analyzer, Function* function);
 static void analyze_pattern(Analyzer* analyzer, Pattern* pattern);
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
-static void analyze_expression(Analyzer* analyzer, Expression* expression);
+static void analyze_expression2(Analyzer* analyzer, Expression* expression);
 static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range, TypeId* dst);
 static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range, TypeId* dst);
 static TypeId type_bitwise_binary( Analyzer* analyzer, Expression* first, Expression* second);
@@ -151,30 +151,37 @@ static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
 
-bool analyze(Ast* ast, Reporter* reporter) {
-    TypeBinding bool_binding = {
-        .name = STRING_LITERAL("Bool"),
-        .type = TYPE_BOOL,
-    };
-    insert_type_binding(&ast->bindings, ROOT_SCOPE_ID, bool_binding, NULL);
-
+void analyze_module(Module* module, AstData* data, Reporter* reporter) {
     Analyzer analyzer = {
-        .source = ast->source,
+        .source = data->source,
         .reporter = reporter,
-        .types = &ast->types,
-        .bindings = &ast->bindings,
-        .scope_location = scope_end_location(ast->bindings, ROOT_SCOPE_ID),
-        .expressions = ast->expressions.data,
+        .types = &data->types,
+        .bindings = &data->bindings,
+        .scope_location = scope_end_location(data->bindings, ROOT_SCOPE_ID),
+        .expressions = data->expressions.data,
         .function_variable_space = NULL,
         .function_id = 0,
-        .storage = &ast->storage,
+        .storage = &data->storage,
     };
-
-    analyze_module(&analyzer, &ast->root);
-    return reporter_error_count(reporter) == 0;
+    analyze_module2(&analyzer, module);
 }
 
-static void analyze_module(Analyzer* parent, Module* module) {
+void analyze_expression(Expression* expression, AstData* data, Reporter* reporter) {
+    Analyzer analyzer = {
+        .source = data->source,
+        .reporter = reporter,
+        .types = &data->types,
+        .bindings = &data->bindings,
+        .scope_location = scope_end_location(data->bindings, ROOT_SCOPE_ID),
+        .expressions = data->expressions.data,
+        .function_variable_space = NULL,
+        .function_id = 0,
+        .storage = &data->storage,
+    };
+    analyze_expression2(&analyzer, expression);
+}
+
+static void analyze_module2(Analyzer* parent, Module* module) {
     ScopeLocation global_scope = scope_new(parent->bindings, parent->scope_location);
     module->global_scope = global_scope.scope_id;
     Analyzer analyzer = with_scope_location(*parent, global_scope);
@@ -263,7 +270,7 @@ static void analyze_constant_def(Analyzer* analyzer, ConstantDef* constant_def) 
         analyze_function_body(analyzer, &expression->as.function);
         return;
     }
-    analyze_expression(analyzer, expression);
+    analyze_expression2(analyzer, expression);
 }
 
 static void analyze_function_signature(Analyzer* analyzer, Function* function) {
@@ -359,7 +366,7 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
     variable_def->binding = binding_entry.id;
 }
 
-static void analyze_expression(Analyzer* analyzer, Expression* expression) {
+static void analyze_expression2(Analyzer* analyzer, Expression* expression) {
     switch (expression->kind) {
     case EXPRESSION_VARIABLE:
         analyze_variable_ref(analyzer, &expression->as.variable);
@@ -408,7 +415,7 @@ static void analyze_unary_operation(
     TypeId* dst
 ) {
     Expression* operand = &analyzer->expressions[unary_operation->operand];
-    analyze_expression(analyzer, operand);
+    analyze_expression2(analyzer, operand);
 
     switch (unary_operation->operator) {
     case OPERATION_NOT:
@@ -454,8 +461,8 @@ static void analyze_binary_operation(
 ) {
     Expression* first = &analyzer->expressions[binary_operation->first];
     Expression* second = &analyzer->expressions[binary_operation->second];
-    analyze_expression(analyzer, first);
-    analyze_expression(analyzer, second);
+    analyze_expression2(analyzer, first);
+    analyze_expression2(analyzer, second);
 
     int index;
     switch (binary_operation->operator) {
@@ -624,7 +631,7 @@ static void analyze_function_body(Analyzer* parent, Function* function) {
     analyzer.function_variable_space = &function->variable_space;
     analyzer.function_id = function->function_id;
     Expression* output = &analyzer.expressions[function->output];
-    analyze_expression(&analyzer, output);
+    analyze_expression2(&analyzer, output);
     if (output->type != function->output_type && output->type != TYPE_INVALID) {
         // currently, all functions have an explicit return type
         assert(function->explicit_output_type);

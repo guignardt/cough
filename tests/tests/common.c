@@ -146,27 +146,35 @@ void test_vm_system_free(TestVmSystem system) {
     array_buf_free(SyscallRecord)(&system.syscalls);
 }
 
-Ast source_to_ast(String text) {
+void source_to_module(String text, Module* dst, AstData* dst_data) {
     SourceText source = source_text_new(NULL, text.data);
     TokenStream tokens;
     CrashingReporter reporter = crashing_reporter_new(source);
-    assert(tokenize(text, &reporter.base, &tokens));
-    Ast ast;
-    assert(parse(tokens, &reporter.base, &ast));
-    assert(analyze(&ast, &reporter.base));
-    return ast;
+    tokenize(text, &reporter.base, &tokens);
+    parse_module(tokens, &reporter.base, dst, dst_data);
+    analyze_module(dst, dst_data, &reporter.base);
 }
 
-Bytecode source_to_bytecode(String text) {
+void source_to_expression(String text, ExpressionId* dst, AstData* dst_data) {
     SourceText source = source_text_new(NULL, text.data);
     TokenStream tokens;
     CrashingReporter reporter = crashing_reporter_new(source);
-    assert(tokenize(text, &reporter.base, &tokens));
-    Ast ast;
-    assert(parse(tokens, &reporter.base, &ast));
-    assert(analyze(&ast, &reporter.base));
+    tokenize(text, &reporter.base, &tokens);
+    parse_expression(tokens, &reporter.base, dst, dst_data);
+    analyze_expression(&dst_data->expressions.data[*dst], dst_data, &reporter.base);
+}
+
+Bytecode source_to_module_bytecode(String text) {
+    SourceText source = source_text_new(NULL, text.data);
+    TokenStream tokens;
+    CrashingReporter reporter = crashing_reporter_new(source);
+    tokenize(text, &reporter.base, &tokens);
+    Module module;
+    AstData data;
+    parse_module(tokens, &reporter.base, &module, &data);
+    analyze_module(&module, &data, &reporter.base);
     Emitter emitter = emitter_new();
-    generate(&ast, &emitter);
+    generate_module(module, data, &emitter);
     Bytecode bytecode;
     assert(emitter_finish(&emitter, &bytecode));
     return bytecode;

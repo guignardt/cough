@@ -88,6 +88,15 @@ SymbolIndex emit_new_symbol(Emitter* emitter) {
     return symbol_index;
 }
 
+SymbolIndex emit_many_new_symbols(Emitter* emitter, usize n) {
+    SymbolIndex first = emitter->_next_symbol;
+    // FIXME: optimize
+    for (size_t i = 0; i < n; i++) {
+        emit_new_symbol(emitter);
+    }
+    return first;
+}
+
 bool emit_symbol_location(Emitter* emitter, SymbolIndex symbol_index) {
     if (emitter->_symbol_locations.data[symbol_index] != UNSET_LOCATION) {
         return false;

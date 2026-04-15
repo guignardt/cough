@@ -8,16 +8,18 @@ int main(int argc, char const *argv[]) {
     char const source_raw[] =
         "constant_fn :: fn _: Bool -> Bool => true;\n"
     ;
-    Ast ast = source_to_ast(STRING_LITERAL(source_raw));
+    Module module;
+    AstData data;
+    source_to_module(STRING_LITERAL(source_raw), &module, &data);
 
-    assert(ast.root.global_constants.len == 1);
+    assert(module.global_constants.len == 1);
     {
-        ConstantDef constant = ast.root.global_constants.data[0];
+        ConstantDef constant = module.global_constants.data[0];
         assert(constant.name.range.start == 0);
         assert(constant.name.range.end == 11);
         assert(!constant.explicitly_typed);
         {
-            Expression value = ast.expressions.data[constant.value];
+            Expression value = data.expressions.data[constant.value];
             assert(value.kind == EXPRESSION_FUNCTION);
             {
                 Pattern input = value.as.function.input;
@@ -31,7 +33,7 @@ int main(int argc, char const *argv[]) {
                 assert(input.as.variable.type == TYPE_BOOL);
             }
             {
-                Expression output = ast.expressions.data[value.as.function.output];
+                Expression output = data.expressions.data[value.as.function.output];
                 assert(output.kind == EXPRESSION_LITERAL_BOOL);
                 assert(output.as.literal_bool == true);
             }

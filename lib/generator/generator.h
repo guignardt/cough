@@ -4,4 +4,4 @@
 #include "emitter/emitter.h"
 #include "diagnostics/report.h"
 
-void generate(Ast* ast, Emitter* emitter);
+void generate_module(Module module, AstData data, Emitter* emitter);

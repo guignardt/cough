@@ -6,19 +6,21 @@
 #include "ast/expression.h"
 #include "ast/memory.h"
 
-typedef struct Module {
-    ScopeId global_scope;
-    ArrayBuf(ConstantDef) global_constants;
-} Module;
-
-typedef struct Ast {
+typedef struct AstData {
     String source;
     TypeRegistry types;
     BindingRegistry bindings;
     ArrayBuf(Expression) expressions;
-    ArrayBuf(usize) functions;  // expression IDs
-    Module root;
+    ArrayBuf(usize) functions;  // expression IDs, indexed by `Function::function_id`
     AstStorage storage;
-} Ast;
+} AstData;
 
-void ast_free(Ast* ast);
+// creates new data with default type bindings
+// in a 'root' scope
+AstData ast_data_new(String source);
+void ast_data_free(AstData* data);
+
+typedef struct Module {
+    ScopeId global_scope;
+    ArrayBuf(ConstantDef) global_constants;
+} Module;

@@ -21,7 +21,7 @@ int main(int argc, char const** argv) {
         "   var %0",
         "   ret",
     };
-    Bytecode generated = source_to_bytecode(STRING_LITERAL(source));
+    Bytecode generated = source_to_module_bytecode(STRING_LITERAL(source));
     Bytecode expected = assembly_to_bytecode(assembly, sizeof(assembly) / sizeof(char const*));
     
     eprintf("DISASSEMBLY\n");

@@ -3,7 +3,6 @@
 #include "util/collections/array.h"
 #include "ast/type.h"
 #include "ast/binding_id.h"
-#include "emitter/emitter.h"
 
 typedef struct Identifier {
     String string;
@@ -69,7 +68,6 @@ typedef struct Function {
     Range signature_range;
     ScopeId output_scope;
     ExpressionId output;
-    SymbolIndex symbol;
     usize function_id;
     usize variable_space; // in words
 } Function;

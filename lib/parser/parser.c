@@ -9,9 +9,7 @@ typedef struct Parser {
     TokenStream tokens;
     usize pos;
     Reporter* reporter;
-    ArrayBuf(Expression) expressions;
-    ArrayBuf(usize) functions;
-    AstStorage storage;
+    AstData data;
 } Parser;
 
 static void unexpected_token(Parser* parser, TokenKind expected) {
@@ -97,8 +95,8 @@ static void parser_skip_until(Parser* parser, TokenKind kind) {
 }
 
 static ExpressionId box_expression(Parser* parser, Expression expression) {
-    usize id = parser->expressions.len;
-    array_buf_push(Expression)(&parser->expressions, expression);
+    usize id = parser->data.expressions.len;
+    array_buf_push(Expression)(&parser->data.expressions, expression);
     return id;
 }
 
@@ -110,10 +108,10 @@ typedef enum Precedence {
     PRECEDENCE_PRIMARY,
 } Precedence;
 
-static Result parse_module(Parser* parser, Module* dst);
+static Result parse_module2(Parser* parser, Module* dst);
 static Result parse_constant(Parser* parser, ConstantDef* dst);
 // range may be NULL
-static Result parse_expression(Parser* parser, ExpressionId* dst, Range* range);
+static Result parse_expression2(Parser* parser, ExpressionId* dst, Range* range);
 // range may be NULL
 static Result parse_expression_precedence(Parser* parser, Precedence precedence, ExpressionId* dst, Range* range);
 static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range);
@@ -135,36 +133,46 @@ static Result parse_pattern(Parser* parser, Pattern* dst);
 static Result parse_type_name(Parser* parser, TypeName* dst);
 static Result parse_identifier(Parser* parser, Identifier* dst);
 
-bool parse(
+void parse_module(
     TokenStream tokens,
     Reporter* reporter,
-    Ast* dst
+    Module* dst,
+    AstData* dst_data
 ) {
+    AstData data = ast_data_new(tokens.source);
     Parser parser = {
         .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,
-        .expressions = array_buf_new(Expression)(),
-        .functions = array_buf_new(usize)(),
-        .storage = ast_storage_new(),
+        .data = data,
     };
-    Module module;
-    parse_module(&parser, &module);
-    ast_store(&parser.storage, parser.expressions.data);
-    ast_store(&parser.storage, parser.functions.data);
-    *dst = (Ast){
-        .bindings = binding_registry_new(),
-        .types = type_registry_new(),
-        .expressions = parser.expressions,
-        .functions = parser.functions,
-        .root = module,
-        .storage = parser.storage,
+    parse_module2(&parser, dst);
+    ast_store(&parser.data.storage, parser.data.expressions.data);
+    ast_store(&parser.data.storage, parser.data.functions.data);
+    *dst_data = parser.data;
+}
+void parse_expression(
+    TokenStream tokens,
+    Reporter* reporter,
+    ExpressionId* dst,
+    AstData* dst_data
+) {
+    AstData data = ast_data_new(tokens.source);
+    Parser parser = {
+        .source = tokens.source,
+        .tokens = tokens,
+        .pos = 0,
+        .reporter = reporter,
+        .data = data,
     };
-    return reporter_error_count(reporter) == 0;
+    parse_expression2(&parser, dst, NULL);
+    ast_store(&parser.data.storage, parser.data.expressions.data);
+    ast_store(&parser.data.storage, parser.data.functions.data);
+    *dst_data = parser.data;
 }
 
-static Result parse_module(Parser* parser, Module* dst) {
+static Result parse_module2(Parser* parser, Module* dst) {
     TokenStream tokens = parser->tokens;
     ArrayBuf(ConstantDef) global_constants = array_buf_new(ConstantDef)();
     while (parser->pos != tokens.tokens.len) {
@@ -177,7 +185,7 @@ static Result parse_module(Parser* parser, Module* dst) {
         array_buf_push(ConstantDef)(&global_constants, constant);
     }
     *dst = (Module){
-        .global_constants = global_constants
+        .global_constants = global_constants,
     };
     return OK;
 }
@@ -192,7 +200,7 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
         return ERROR;
     }
     ExpressionId value;
-    if (parse_expression(parser, &value, NULL) != OK) {
+    if (parse_expression2(parser, &value, NULL) != OK) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_SEMICOLON, NULL)) {
@@ -477,7 +485,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
         return ERROR;
     }
     ExpressionId output;
-    if (parse_expression(parser, &output, NULL) != OK) {
+    if (parse_expression2(parser, &output, NULL) != OK) {
         return ERROR;
     }
     usize end = parser->pos;
@@ -554,7 +562,7 @@ static Result parse_identifier(Parser* parser, Identifier* dst) {
     return OK;
 }
 
-static Result parse_expression(Parser* parser, ExpressionId* dst, Range* dst_range) {
+static Result parse_expression2(Parser* parser, ExpressionId* dst, Range* dst_range) {
     return parse_expression_precedence(parser, PRECEDENCE_ANY, dst, dst_range);
 }
 
@@ -733,7 +741,7 @@ static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range*
     switch (head.kind) {
     case TOKEN_PAREN_LEFT:;
         usize start = parser->pos++;
-        parse_expression(parser, dst, NULL);
+        parse_expression2(parser, dst, NULL);
         if (!parser_match(parser, TOKEN_PAREN_RIGHT, NULL)) {
             unclosed_paren(parser, start);
             return ERROR;
@@ -789,12 +797,12 @@ static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range*
         return ERROR;
     }
 
-    ExpressionId id = parser->expressions.len;
+    ExpressionId id = parser->data.expressions.len;
     if (expr.kind == EXPRESSION_FUNCTION) {
-        expr.as.function.function_id = parser->functions.len;
-        array_buf_push(usize)(&parser->functions, id);
+        expr.as.function.function_id = parser->data.functions.len;
+        array_buf_push(usize)(&parser->data.functions, id);
     }
-    array_buf_push(Expression)(&parser->expressions, expr);
+    array_buf_push(Expression)(&parser->data.expressions, expr);
 
     *dst = id;
     *dst_range = expr.range;

@@ -13,4 +13,5 @@ typedef enum AnalyzerError {
     CE_INVALID_BINDING_KIND,
 } AnalyzerError;
 
-bool analyze(Ast* ast, Reporter* reporter);
+void analyze_module(Module* module, AstData* data, Reporter* reporter);
+void analyze_expression(Expression* expression, AstData* data, Reporter* reporter);

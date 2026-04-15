@@ -11,8 +11,16 @@ typedef enum ParserError {
     CE_INTEGER_LITERAL_OVERFLOWED
 } ParserError;
 
-bool parse(
+void parse_module(
     TokenStream tokens,
     Reporter* reporter,
-    Ast* dst
+    Module* dst,
+    AstData* dst_data
+);
+
+void parse_expression(
+    TokenStream tokens,
+    Reporter* reporter,
+    ExpressionId* dst,
+    AstData* dst_data
 );

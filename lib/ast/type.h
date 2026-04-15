@@ -39,6 +39,7 @@ typedef struct TypeRegistry {
     HashMap(FunctionType, TypeId) _function_types;
 } TypeRegistry;
 
+// creates new type registry with default types
 TypeRegistry type_registry_new(void);
 void type_registry_free(TypeRegistry* type_registry);
 
