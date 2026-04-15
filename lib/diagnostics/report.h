@@ -11,7 +11,6 @@ typedef struct Reporter {
 } Reporter;
 
 typedef struct ReporterVTable {
-    // FIXME: exact integer type for code
     void(*start)(Reporter* self, Severity severity, i32 code);
     void(*end)(Reporter* self);
     void(*message)(Reporter* self, StringBuf message);

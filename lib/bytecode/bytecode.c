@@ -84,7 +84,12 @@ bool eq(Mnemonic)(Mnemonic a, Mnemonic b) {
 }
 
 void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo) {
-    hash(u64)(hasher, *(const u64*)&mnemo);
+    // by design, `Mnemonic` has the layout of `u64`
+    union {
+        Mnemonic value;
+        u64 bits;
+    } cast = { .value = mnemo };
+    hash(u64)(hasher, cast.bits);
 }
 
 #define OPERATION_MNEMONIC(opcode, mnemo, ...) [opcode] = { #mnemo },
