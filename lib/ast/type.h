@@ -17,6 +17,7 @@ bool eq(FunctionType)(FunctionType, FunctionType);
 DECL_HASH_MAP(FunctionType, TypeId)
 
 typedef enum TypeKind {
+    TYPE_UNIT,
     TYPE_BOOL,
     TYPE_UINT,
     TYPE_INT,

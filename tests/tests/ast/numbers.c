@@ -58,12 +58,14 @@ int parse_num(char const* text, ExpressionId* dst, AstData* dst_data) {
     TokenStream tokens;
     tokenize(source_text, &reporter.base, &tokens);
     assert(reporter.error_codes.len == 0);
-    parse_expression(tokens, ast_data_default(source_text), &reporter.base, dst, dst_data);
+    AstData data = ast_data_default(source_text);
+    parse_expression(tokens, &data, &reporter.base, dst);
     if (reporter.error_codes.len > 0) {
         assert(reporter.error_codes.len == 1);
         assert(reporter.error_codes.data[0] == CE_INTEGER_LITERAL_OVERFLOWED);
     }
     test_reporter_free(&reporter);
+    *dst_data = data;
     return reporter.error_codes.len;
 }
 

@@ -9,6 +9,10 @@ AstData ast_data_default(String source) {
         .functions = array_buf_new(usize)(),
         .storage = ast_storage_new(),
     };
+    TypeBinding unit_binding = {
+        .name = STRING_LITERAL("Unit"),
+        .type = TYPE_UNIT,
+    };
     TypeBinding bool_binding = {
         .name = STRING_LITERAL("Bool"),
         .type = TYPE_BOOL,
@@ -25,6 +29,7 @@ AstData ast_data_default(String source) {
         .name = STRING_LITERAL("Float"),
         .type = TYPE_FLOAT,
     };
+    insert_type_binding(&data.bindings, ROOT_SCOPE_ID, unit_binding, NULL);
     insert_type_binding(&data.bindings, ROOT_SCOPE_ID, bool_binding, NULL);
     insert_type_binding(&data.bindings, ROOT_SCOPE_ID, uint_binding, NULL);
     insert_type_binding(&data.bindings, ROOT_SCOPE_ID, int_binding, NULL);

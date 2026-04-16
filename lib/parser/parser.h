@@ -13,16 +13,14 @@ typedef enum ParserError {
 
 void parse_module(
     TokenStream tokens,
-    AstData context,
+    AstData* data,
     Reporter* reporter,
-    Module* dst,
-    AstData* dst_data
+    Module* dst
 );
 
 void parse_expression(
     TokenStream tokens,
-    AstData context,
+    AstData* data,
     Reporter* reporter,
-    ExpressionId* dst,
-    AstData* dst_data
+    ExpressionId* dst
 );

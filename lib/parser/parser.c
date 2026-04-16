@@ -136,42 +136,40 @@ static Result parse_identifier(Parser* parser, Identifier* dst);
 
 void parse_module(
     TokenStream tokens,
-    AstData context,
+    AstData* data,
     Reporter* reporter,
-    Module* dst,
-    AstData* dst_data
+    Module* dst
 ) {
     Parser parser = {
         .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,
-        .data = context,
+        .data = *data,
     };
     parse_module2(&parser, dst);
     ast_store(&parser.data.storage, parser.data.expressions.data);
     ast_store(&parser.data.storage, parser.data.functions.data);
-    *dst_data = parser.data;
+    *data = parser.data;
 }
 
 void parse_expression(
     TokenStream tokens,
-    AstData context,
+    AstData* data,
     Reporter* reporter,
-    ExpressionId* dst,
-    AstData* dst_data
+    ExpressionId* dst
 ) {
     Parser parser = {
         .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,
-        .data = context,
+        .data = *data,
     };
     parse_expression2(&parser, dst, NULL);
     ast_store(&parser.data.storage, parser.data.expressions.data);
     ast_store(&parser.data.storage, parser.data.functions.data);
-    *dst_data = parser.data;
+    *data = parser.data;
 }
 
 static Result parse_module2(Parser* parser, Module* dst) {
@@ -518,6 +516,10 @@ static Result parse_conditional(Parser* parser, Conditional* dst, Range* range) 
     }
     dst->has_else = parser->tokens.tokens.data[parser->pos].kind == TOKEN_ELSE;
     if (dst->has_else) {
+        parser->pos++;
+        if (parser->tokens.tokens.data[parser->pos].kind != TOKEN_DOUBLE_ARROW) {
+            return ERROR;
+        }
         parser->pos++;
         if (parse_expression2(parser, &dst->if_false, NULL) != OK) {
             return ERROR;

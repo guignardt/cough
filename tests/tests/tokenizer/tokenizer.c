@@ -11,7 +11,7 @@ int main(int argc, char const* argv[]) {
         " + - * / % "
         "hello "
         " 15 +4.3 "
-        "let fn \n false true";
+        "let fn \n false true if elif else";
     TestReporter reporter = test_reporter_new();
 
     TokenStream tokens;
@@ -23,7 +23,7 @@ int main(int argc, char const* argv[]) {
 
     assert(reporter.error_codes.len == 0);
 
-    assert(tokens.tokens.len == 25);
+    assert(tokens.tokens.len == 28);
     for (usize i = 0; i < tokens.tokens.len; i++) {
         assert(tokens.tokens.data[i].kind == i);
     }

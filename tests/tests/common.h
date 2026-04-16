@@ -59,6 +59,6 @@ TestVmSystem test_vm_system_new(void);
 void test_vm_system_free(TestVmSystem system);
 
 void source_to_module(String source, Module* dst, AstData* dst_data);
-void source_to_expression(String source, AstData context, ExpressionId* dst, AstData* dst_data);
+void source_to_expression(String source, AstData* data, ExpressionId* dst);
 Bytecode source_to_module_bytecode(String source);
 Bytecode assembly_to_bytecode(char const** parts, usize count);

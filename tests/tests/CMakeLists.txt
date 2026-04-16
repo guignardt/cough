@@ -16,6 +16,7 @@ cough_test(test_ast_identity_fn ast/identity_fn.c)
 cough_test(test_ast_functions ast/functions.c)
 cough_test(test_ast_expressions ast/expressions.c)
 cough_test(test_ast_numbers ast/numbers.c)
+cough_test(test_ast_conditional ast/conditional.c)
 
 cough_test(test_generator_functions generator/functions.c)
 cough_test(test_generator_expression generator/expression.c)

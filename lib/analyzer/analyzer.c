@@ -143,10 +143,11 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function);
 static void analyze_pattern(Analyzer* analyzer, Pattern* pattern);
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression2(Analyzer* analyzer, Expression* expression);
-static void analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range, TypeId* dst);
-static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range, TypeId* dst);
+static TypeId analyze_unary_operation(Analyzer* analyzer, UnaryOperation* unary_operation, Range range);
+static TypeId analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, Range range);
 static TypeId type_bitwise_binary( Analyzer* analyzer, Expression* first, Expression* second);
 static TypeId type_arithmetic_binary( Analyzer* analyzer, Expression* first, Expression* second, int* index);
+static TypeId analyze_conditional(Analyzer* analyzer, Conditional* conditional);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
@@ -366,6 +367,62 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
     variable_def->binding = binding_entry.id;
 }
 
+static TypeId analyze_conditional(Analyzer* analyzer, Conditional* conditional) {
+    Expression* condition = &analyzer->expressions[conditional->condition];
+    analyze_expression2(analyzer, condition);
+
+    Expression* if_true = &analyzer->expressions[conditional->if_true];
+    analyze_expression2(analyzer, if_true);
+
+    Expression* if_false = NULL;
+    if (conditional->if_false) {
+        if_false = &analyzer->expressions[conditional->if_false];
+        analyze_expression2(analyzer, if_false);
+    }
+
+    if (condition->type != TYPE_BOOL && condition->type != TYPE_INVALID) {
+        mismatched_types(
+            analyzer,
+            TYPE_BOOL,
+            false,
+            (Range){0},
+            condition->type,
+            condition->range
+        );
+    }
+
+    if (!conditional->has_else) {
+        if (if_true->type != TYPE_UNIT && if_true->type != TYPE_INVALID) {
+            mismatched_types(
+                analyzer,
+                TYPE_UNIT,
+                false,
+                (Range){0},
+                if_true->type,
+                if_true->range
+            );
+        }
+        return TYPE_UNIT;
+    } else {
+        if (
+            if_true->type != if_false->type
+            && if_true->type != TYPE_INVALID
+            && if_false->type != TYPE_INVALID
+        ) {
+            mismatched_types(
+                analyzer,
+                if_true->type,
+                true,
+                if_true->range,
+                if_false->type,
+                if_false->range
+            );
+            return TYPE_INVALID;
+        }
+        return (if_true->type == TYPE_INVALID) ? TYPE_INVALID : if_false->type;
+    }
+}
+
 static void analyze_expression2(Analyzer* analyzer, Expression* expression) {
     switch (expression->kind) {
     case EXPRESSION_VARIABLE:
@@ -399,20 +456,23 @@ static void analyze_expression2(Analyzer* analyzer, Expression* expression) {
         break;
 
     case EXPRESSION_UNARY_OPERATION:
-        analyze_unary_operation(analyzer, &expression->as.unary_operation, expression->range, &expression->type);
+        expression->type = analyze_unary_operation(analyzer, &expression->as.unary_operation, expression->range);
         break;
 
     case EXPRESSION_BINARY_OPERATION:
-        analyze_binary_operation(analyzer, &expression->as.binary_operation, expression->range, &expression->type);
+        expression->type = analyze_binary_operation(analyzer, &expression->as.binary_operation, expression->range);
+        break;
+
+    case EXPRESSION_CONDITIONAL:
+        expression->type = analyze_conditional(analyzer, &expression->as.conditional);
         break;
     }
 }
 
-static void analyze_unary_operation(
+static TypeId analyze_unary_operation(
     Analyzer* analyzer,
     UnaryOperation* unary_operation,
-    Range range,
-    TypeId* dst
+    Range range
 ) {
     Expression* operand = &analyzer->expressions[unary_operation->operand];
     analyze_expression2(analyzer, operand);
@@ -429,8 +489,7 @@ static void analyze_unary_operation(
                 operand->range
             );
         }
-        *dst = TYPE_BOOL;
-        break;
+        return TYPE_BOOL;
 
     // only `OPERATION_NEG` is actually produced by the parser
     case OPERATION_NEG: // = `OPERATION_NEG_INT`
@@ -438,13 +497,12 @@ static void analyze_unary_operation(
         switch (operand->type) {
         case TYPE_INT:
             unary_operation->operator = OPERATION_NEG_INT;
-            *dst = TYPE_INT;
-            break;
+            return TYPE_INT;
         case TYPE_FLOAT:
             unary_operation->operator = OPERATION_NEG_FLOAT;
-            *dst = TYPE_FLOAT;
-            break;
-        case TYPE_INVALID: break;
+            return TYPE_INT;
+        case TYPE_INVALID:
+            return TYPE_INVALID;
         default:
             // TODO: mismatched type for ambiguous operator
             exit(-1);
@@ -453,27 +511,27 @@ static void analyze_unary_operation(
     }
 }
 
-static void analyze_binary_operation(
+static TypeId analyze_binary_operation(
     Analyzer* analyzer,
     BinaryOperation* binary_operation,
-    Range range,
-    TypeId* dst
+    Range range
 ) {
     Expression* first = &analyzer->expressions[binary_operation->first];
     Expression* second = &analyzer->expressions[binary_operation->second];
     analyze_expression2(analyzer, first);
     analyze_expression2(analyzer, second);
 
+    TypeId type;
     int index;
     switch (binary_operation->operator) {
     case OPERATION_FUNCTION_CALL:;
         if (second->type == TYPE_INVALID) {
-            return;
+            return TYPE_INVALID;
         }
         Type callee_type = get_type(*analyzer->types, second->type);
         if (callee_type.kind != TYPE_FUNCTION) {
             called_non_function(analyzer, second->type, second->range);
-            return;
+            return TYPE_INVALID;
         }
         if (callee_type.as.function.input != first->type) {
             mismatched_types(
@@ -485,46 +543,44 @@ static void analyze_binary_operation(
                 first->range
             );
         }
-        *dst = callee_type.as.function.output;
-        break;
+        return callee_type.as.function.output;
 
     case OPERATION_OR:
     case OPERATION_AND:
-    case OPERATION_XOR:;
-        *dst = type_bitwise_binary(analyzer, first, second);
-        break;
+    case OPERATION_XOR:
+        return type_bitwise_binary(analyzer, first, second);
 
     // only `OPERATION_ADD` ist actually produced by the parser
     case OPERATION_ADD: // = `OPERATION_ADD_UINT`
     case OPERATION_ADD_INT:
-    case OPERATION_ADD_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, first, second, &index);
+    case OPERATION_ADD_FLOAT:
+        type = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_ADD + index;
-        break;
+        return type;
 
     // only `OPERATION_SUB` ist actually produced by the parser
     case OPERATION_SUB: // = `OPERATION_ADD_UINT`
     case OPERATION_SUB_INT:
-    case OPERATION_SUB_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, first, second, &index);
+    case OPERATION_SUB_FLOAT:
+        type = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_SUB + index;
-        break;
+        return type;
 
     // only `OPERATION_MUL` ist actually produced by the parser
     case OPERATION_MUL: // = `OPERATION_ADD_UINT`
     case OPERATION_MUL_INT:
-    case OPERATION_MUL_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, first, second, &index);
+    case OPERATION_MUL_FLOAT:
+        type = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_MUL + index;
-        break;
+        return type;
 
     // only `OPERATION_DIV` ist actually produced by the parser
     case OPERATION_DIV: // = `OPERATION_ADD_UINT`
     case OPERATION_DIV_INT:
-    case OPERATION_DIV_FLOAT:;
-        *dst = type_arithmetic_binary(analyzer, first, second, &index);
+    case OPERATION_DIV_FLOAT:
+        type = type_arithmetic_binary(analyzer, first, second, &index);
         binary_operation->operator = OPERATION_DIV + index;
-        break;
+        return type;
     }
 }
 
