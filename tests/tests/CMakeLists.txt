@@ -20,6 +20,7 @@ cough_test(test_ast_conditional ast/conditional.c)
 
 cough_test(test_generator_functions generator/functions.c)
 cough_test(test_generator_expression generator/expression.c)
+cough_test(test_generator_conditional generator/conditional.c)
 
 cough_test(test_assembler assembler/assembler.c)
 

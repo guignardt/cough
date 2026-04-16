@@ -67,11 +67,17 @@ typedef enum Opcode {
     /// @param loc The location of the instruction to jump to.
     OP_JMP,
 
-    /// @brief `jnz` -- pops the stack jump to the specified memory location if
+    /// @brief `jnz` -- pop the stack and jump to the specified memory location if
     /// the popped value is non-zero.
     ///
     /// @param loc The location of the instruction to jump to.
     OP_JNZ,
+
+    /// @brief `jze` -- pop the stack and jump to the specified memory location if
+    /// the popped value is zero.
+    ///
+    /// @param loc The location of the instruction to jump to.
+    OP_JZE,
 
     /// @brief `equ` -- check if two `UInt`'s are equal. Pops the two values at
     /// the top of the stack, and pops `1` if they are equal, and `0` otherwise.
@@ -240,6 +246,7 @@ void bytecode_write_location_at(Byteword** ip, usize symbol);
                                 \
     proc(OP_JMP, jmp, loc)      \
     proc(OP_JNZ, jnz, loc)      \
+    proc(OP_JZE, jze, loc)      \
                                 \
     proc(OP_EQU, equ)           \
     proc(OP_NEU, neu)           \

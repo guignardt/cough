@@ -14,6 +14,7 @@ static void generate_pattern_match(Generator gen, Pattern pattern);
 static void generate_expression2(Generator gen, Expression expression);
 static void generate_unary_operation(Generator gen, UnaryOperation unary_operation);
 static void generate_binary_operation(Generator gen, BinaryOperation binary_operation);
+static void generate_conditional(Generator gen, Conditional conditional);
 
 // FIXME: change this, since we don't use the module?
 void generate_module(Module module, AstData data, Emitter* emitter) {
@@ -137,6 +138,10 @@ static void generate_expression2(Generator gen, Expression expression) {
     case EXPRESSION_BINARY_OPERATION:
         generate_binary_operation(gen, expression.as.binary_operation);
         break;
+
+    case EXPRESSION_CONDITIONAL:
+        generate_conditional(gen, expression.as.conditional);
+        break;
     }
 }
 
@@ -218,5 +223,22 @@ static void generate_binary_operation(Generator gen, BinaryOperation binary_oper
     case OPERATION_DIV_FLOAT:
         emit(dvf)(gen.emitter);
         break;
+    }
+}
+
+static void generate_conditional(Generator gen, Conditional conditional) {
+    SymbolIndex if_false_symbol = emit_new_symbol(gen.emitter);
+    SymbolIndex after_else_symbol = -1;
+    generate_expression2(gen, gen.expressions[conditional.condition]);
+    emit(jze)(gen.emitter, if_false_symbol);
+    generate_expression2(gen, gen.expressions[conditional.if_true]);
+    if (conditional.has_else) {
+        after_else_symbol = emit_new_symbol(gen.emitter);
+        emit(jmp)(gen.emitter, after_else_symbol);
+    }
+    emit_symbol_location(gen.emitter, if_false_symbol);
+    if (conditional.has_else) {
+        generate_expression2(gen, gen.expressions[conditional.if_false]);
+        emit_symbol_location(gen.emitter, after_else_symbol);
     }
 }

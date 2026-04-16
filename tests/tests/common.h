@@ -16,6 +16,7 @@
 #include "analyzer/analyzer.h"
 #include "generator/generator.h"
 #include "assembler/assembler.h"
+#include "disassembler/disassembler.h"
 
 #include "vm/system.h"
 #include "vm/vm.h"

@@ -246,6 +246,13 @@ static ControlFlow op_jnz(Vm* vm, usize dst) {
     return FLOW_CONTINUE;
 }
 
+static ControlFlow op_jze(Vm* vm, usize dst) {
+    if (pop(vm).as_uint == 0) {
+        vm->ip = vm->bytecode.instructions.data + dst;
+    }
+    return FLOW_CONTINUE;
+}
+
 static ControlFlow op_not(Vm* vm) {
     push(vm, (Word){ .as_uint = ~pop(vm).as_uint });
     return FLOW_CONTINUE;
