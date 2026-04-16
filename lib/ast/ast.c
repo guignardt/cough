@@ -1,6 +1,6 @@
 #include "ast/ast.h"
 
-AstData ast_data_new(String source) {
+AstData ast_data_default(String source) {
     AstData data = {
         .source = source,
         .types = type_registry_new(),

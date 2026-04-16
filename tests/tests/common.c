@@ -151,16 +151,28 @@ void source_to_module(String text, Module* dst, AstData* dst_data) {
     TokenStream tokens;
     CrashingReporter reporter = crashing_reporter_new(source);
     tokenize(text, &reporter.base, &tokens);
-    parse_module(tokens, &reporter.base, dst, dst_data);
+    parse_module(
+        tokens,
+        ast_data_default(text),
+        &reporter.base,
+        dst,
+        dst_data
+    );
     analyze_module(dst, dst_data, &reporter.base);
 }
 
-void source_to_expression(String text, ExpressionId* dst, AstData* dst_data) {
+void source_to_expression(String text, AstData context, ExpressionId* dst, AstData* dst_data) {
     SourceText source = source_text_new(NULL, text.data);
     TokenStream tokens;
     CrashingReporter reporter = crashing_reporter_new(source);
     tokenize(text, &reporter.base, &tokens);
-    parse_expression(tokens, &reporter.base, dst, dst_data);
+    parse_expression(
+        tokens,
+        context,
+        &reporter.base,
+        dst,
+        dst_data
+    );
     analyze_expression(&dst_data->expressions.data[*dst], dst_data, &reporter.base);
 }
 
@@ -171,7 +183,13 @@ Bytecode source_to_module_bytecode(String text) {
     tokenize(text, &reporter.base, &tokens);
     Module module;
     AstData data;
-    parse_module(tokens, &reporter.base, &module, &data);
+    parse_module(
+        tokens,
+        ast_data_default(text),
+        &reporter.base,
+        &module,
+        &data
+    );
     analyze_module(&module, &data, &reporter.base);
     Emitter emitter = emitter_new();
     generate_module(module, data, &emitter);

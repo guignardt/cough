@@ -58,7 +58,7 @@ int parse_num(char const* text, ExpressionId* dst, AstData* dst_data) {
     TokenStream tokens;
     tokenize(source_text, &reporter.base, &tokens);
     assert(reporter.error_codes.len == 0);
-    parse_expression(tokens, &reporter.base, dst, dst_data);
+    parse_expression(tokens, ast_data_default(source_text), &reporter.base, dst, dst_data);
     if (reporter.error_codes.len > 0) {
         assert(reporter.error_codes.len == 1);
         assert(reporter.error_codes.data[0] == CE_INTEGER_LITERAL_OVERFLOWED);

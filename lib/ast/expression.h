@@ -127,6 +127,13 @@ typedef struct BinaryOperation {
     ExpressionId second;
 } BinaryOperation;
 
+typedef struct Conditional {
+    ExpressionId condition;
+    ExpressionId if_true;
+    bool has_else;
+    ExpressionId if_false;
+} Conditional;
+
 typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
@@ -136,6 +143,7 @@ typedef enum ExpressionKind {
     EXPRESSION_LITERAL_FLOAT,
     EXPRESSION_UNARY_OPERATION,
     EXPRESSION_BINARY_OPERATION,
+    EXPRESSION_CONDITIONAL,
 } ExpressionKind;
 
 typedef struct Expression {
@@ -149,6 +157,7 @@ typedef struct Expression {
         f64 literal_float;
         UnaryOperation unary_operation;
         BinaryOperation binary_operation;
+        Conditional conditional;
     } as;
     Range range;
     TypeId type;

@@ -17,7 +17,7 @@ typedef struct AstData {
 
 // creates new data with default type bindings
 // in a 'root' scope
-AstData ast_data_new(String source);
+AstData ast_data_default(String source);
 void ast_data_free(AstData* data);
 
 typedef struct Module {

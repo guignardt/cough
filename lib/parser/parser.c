@@ -129,42 +129,44 @@ static void parse_integer(Parser* parser, Expression* dst);
 static void parse_float(Parser* parser, Expression* dst);
 // head token must be `fn`
 static Result parse_function(Parser* parser, Function* dst, Range* range);
+static Result parse_conditional(Parser* parser, Conditional* dst, Range* range);
 static Result parse_pattern(Parser* parser, Pattern* dst);
 static Result parse_type_name(Parser* parser, TypeName* dst);
 static Result parse_identifier(Parser* parser, Identifier* dst);
 
 void parse_module(
     TokenStream tokens,
+    AstData context,
     Reporter* reporter,
     Module* dst,
     AstData* dst_data
 ) {
-    AstData data = ast_data_new(tokens.source);
     Parser parser = {
         .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,
-        .data = data,
+        .data = context,
     };
     parse_module2(&parser, dst);
     ast_store(&parser.data.storage, parser.data.expressions.data);
     ast_store(&parser.data.storage, parser.data.functions.data);
     *dst_data = parser.data;
 }
+
 void parse_expression(
     TokenStream tokens,
+    AstData context,
     Reporter* reporter,
     ExpressionId* dst,
     AstData* dst_data
 ) {
-    AstData data = ast_data_new(tokens.source);
     Parser parser = {
         .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,
-        .data = data,
+        .data = context,
     };
     parse_expression2(&parser, dst, NULL);
     ast_store(&parser.data.storage, parser.data.expressions.data);
@@ -502,6 +504,30 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
     return OK;
 }
 
+static Result parse_conditional(Parser* parser, Conditional* dst, Range* range) {
+    usize start = parser->pos++;
+    if (parse_expression2(parser, &dst->condition, NULL) != OK) {
+        return ERROR;
+    }
+    if (parser->tokens.tokens.data[parser->pos].kind != TOKEN_DOUBLE_ARROW) {
+        return ERROR;
+    }
+    parser->pos++;
+    if (parse_expression2(parser, &dst->if_true, NULL) != OK) {
+        return ERROR;
+    }
+    dst->has_else = parser->tokens.tokens.data[parser->pos].kind == TOKEN_ELSE;
+    if (dst->has_else) {
+        parser->pos++;
+        if (parse_expression2(parser, &dst->if_false, NULL) != OK) {
+            return ERROR;
+        }
+    } else {
+        dst->has_else = 0;
+    }
+    return OK;
+}
+
 static Result parse_pattern(Parser* parser, Pattern* dst) {
     usize start = parser->pos;
     Identifier identifier;
@@ -754,6 +780,16 @@ static Result parse_expression_primary(Parser* parser, ExpressionId* dst, Range*
         expr.kind = EXPRESSION_FUNCTION;
         if (
             parse_function(parser, &expr.as.function, &expr.range)
+            != OK
+        ) {
+            return ERROR;
+        }
+        break;
+
+    case TOKEN_IF:
+        expr.kind = EXPRESSION_CONDITIONAL;
+        if (
+            parse_conditional(parser, &expr.as.conditional, &expr.range)
             != OK
         ) {
             return ERROR;

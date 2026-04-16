@@ -33,12 +33,15 @@ static TokenKindDescription token_kind_table[] = {
 
     [TOKEN_IDENTIFIER] =        {   -1, NULL,       "<identifier>"              },
     [TOKEN_INTEGER] =           {   -1, NULL,       "<integer>"                 },
-    [TOKEN_FLOAT] =          {   -1, NULL,       "<floating-point number>"   },
+    [TOKEN_FLOAT] =             {   -1, NULL,       "<floating-point number>"   },
 
     [TOKEN_LET] =               {   3,  "let",      "`let`"                     },
     [TOKEN_FN] =                {   2,  "fn",       "`fn`"                      },
     [TOKEN_FALSE] =             {   5,  "false",    "`false`"                   },
     [TOKEN_TRUE] =              {   4,  "true",     "`true`"                    },
+    [TOKEN_IF] =                {   2,  "if",       "`if`"                      },
+    [TOKEN_ELIF] =              {   4,  "elif",     "`elif`"                    },
+    [TOKEN_ELSE] =              {   4,  "else",     "`else`"                    },
 };
 
 TokenKindDescription token_kind_description(TokenKind token_kind) {

@@ -35,12 +35,15 @@ typedef enum TokenKind {
     TOKEN_FN,
     TOKEN_FALSE,
     TOKEN_TRUE,
+    TOKEN_IF,
+    TOKEN_ELIF,
+    TOKEN_ELSE,
 } TokenKind;
 
 #define TOKEN_PUNCT_START   TOKEN_PAREN_LEFT
 #define TOKEN_PUNCT_LAST    TOKEN_PERCENT
 #define TOKEN_KEYWORD_START TOKEN_LET
-#define TOKEN_KEYWORD_LAST  TOKEN_TRUE
+#define TOKEN_KEYWORD_LAST  TOKEN_ELSE
 
 typedef struct Token {
     TokenKind kind;
