@@ -102,7 +102,7 @@ static ExpressionId box_expression(Parser* parser, Expression expression) {
 
 typedef enum Precedence {
     PRECEDENCE_ANY,
-    PRECEDENCE_BITWISE_BINARY,
+    PRECEDENCE_BITWISE_INFIX,
     PRECEDENCE_PREFIX,
     PRECEDENCE_FUNCTION_CALL,
     PRECEDENCE_PRIMARY,
@@ -656,17 +656,17 @@ Result try_parse_expression_continue(
 
     case TOKEN_TUBE:
         operator = OPERATION_OR;
-        operator_precedence = PRECEDENCE_BITWISE_BINARY;
+        operator_precedence = PRECEDENCE_BITWISE_INFIX;
         new_parser_pos++;
         break;
     case TOKEN_AMPERSAND:
         operator = OPERATION_AND;
-        operator_precedence = PRECEDENCE_BITWISE_BINARY;
+        operator_precedence = PRECEDENCE_BITWISE_INFIX;
         new_parser_pos++;
         break;
     case TOKEN_HAT:
         operator = OPERATION_XOR,
-        operator_precedence = PRECEDENCE_BITWISE_BINARY;
+        operator_precedence = PRECEDENCE_BITWISE_INFIX;
         new_parser_pos++;
         break;
 
