@@ -53,8 +53,10 @@ static void generate_pattern_match(Generator gen, Pattern pattern) {
         Binding binding = get_binding(gen.bindings, binding_id);
         assert(binding.kind == BINDING_VALUE);
         assert(binding.as.value.store.kind == VALUE_STORE_VARIABLE);
-        usize variable_index = binding.as.value.store.as.variable.index;
-        emit(set)(gen.emitter, variable_index);
+        VariableStore store = binding.as.value.store.as.variable;
+        for (isize i = store.size - 1; i >= 0; i--) {
+            emit(set)(gen.emitter, store.index + i);
+        }
         break;
     }
 }
@@ -80,8 +82,11 @@ static void generate_expression2(Generator gen, Expression expression) {
                 return;
             }
             break;
-        case VALUE_STORE_VARIABLE:
-            emit(var)(gen.emitter, binding.as.value.store.as.variable.index);
+        case VALUE_STORE_VARIABLE:;
+            VariableStore store = binding.as.value.store.as.variable;
+            for (usize i = 0; i < store.size; i++) {
+                emit(var)(gen.emitter, store.index + i);
+            }
             return;
         }
         break;
@@ -120,7 +125,7 @@ static void generate_expression2(Generator gen, Expression expression) {
             (Word){ .as_int = expression.as.literal_int }
         );
         break;
-            
+
     case EXPRESSION_LITERAL_FLOAT:
         // all 0s for false, all 1s for true
         // this ensures `not` & friends work correctly as the VM doesn't use a dedicated

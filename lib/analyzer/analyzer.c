@@ -342,18 +342,25 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
         return;
     }
     resolve_type(analyzer, variable_def->type_name, &variable_def->type);
+    usize size = 0;
+    if (variable_def->type != TYPE_INVALID) {
+        Type type = get_type(*analyzer->types, variable_def->type);
+        size = type.size;
+    }
     ValueBinding binding = {
         .name = variable_def->name.string,
         .type = variable_def->type,
         .store = {
             .kind = VALUE_STORE_VARIABLE,
             .as.variable = {
-                .index = (*analyzer->function_variable_space)++,
+                .index = *analyzer->function_variable_space,
+                .size = size,
                 .function_id = analyzer->function_id,
             },
         },
         .source_definition = variable_def->range,
     };
+    *analyzer->function_variable_space += size;
     BindingMut binding_entry;
     if (!push_value_binding(
         analyzer->bindings,

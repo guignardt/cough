@@ -31,6 +31,7 @@ typedef struct Type {
         FunctionType function;
     } as;
     String pretty_name;
+    usize size;
 } Type;
 
 DECL_ARRAY_BUF(Type);

@@ -17,6 +17,7 @@ typedef enum ValueStoreKind {
 
 typedef struct VariableStore {
     usize index;
+    usize size;
     usize function_id;
 } VariableStore;
 
